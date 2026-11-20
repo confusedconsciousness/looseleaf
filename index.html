@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Looseleaf</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231c1c19'/%3E%3Cpath d='M26.2 67.2Q22.7 60.2 27.2 51.2M32.1 61.3Q26.9 52.6 30.9 43.1M38 55.4Q32.2 46.1 35.9 36.3M43.9 49.5Q38.3 40.5 42.1 30.8M49.8 43.6Q45.5 35.8 49.7 26.5M55.7 37.7Q53.6 32.1 58.5 23.5M61.6 31.8Q62.6 29.3 68.6 21.8M28.8 69.8Q35.8 73.3 44.8 68.8M34.7 63.9Q43.4 69.1 52.9 65.1M40.6 58Q49.9 63.8 59.7 60.1M46.5 52.1Q55.5 57.7 65.2 53.9M52.4 46.2Q60.2 50.5 69.5 46.3M58.3 40.3Q63.9 42.4 72.5 37.5M64.2 34.4Q66.7 33.4 74.2 27.4M24 72Q19 79 13 81' fill='none' stroke='%23ffe11a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231c1c19'/%3E%3Cpath d='M24.9 66.9Q21.6 59.6 27 49M32.9 58.9Q27.8 49.8 32.7 38.7M40.9 50.9Q35.8 41.8 40.7 30.7M48.9 42.9Q45.6 35.6 51 25M56.9 34.9Q57.1 31.1 63.8 21.8M29.1 71.1Q36.4 74.4 47 69M37.1 63.1Q46.2 68.2 57.3 63.3M45.1 55.1Q54.2 60.2 65.3 55.3M53.1 47.1Q60.4 50.4 71 45M61.1 39.1Q64.9 38.9 74.2 32.2M24 72Q20 78 14 81' fill='none' stroke='%23ffe11a' stroke-width='5.5' stroke-linecap='round'/%3E%3C/svg%3E">
 
 <!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
      there is no build step. It needs the network on first load; to work offline or pin the
@@ -56,11 +56,14 @@
     border-right: 1px solid var(--line); transition: width .18s ease;
   }
   #side header { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px 0 14px; flex: none; }
-  /* The mark: a loose leaf drawn only with its veins; the midrib is the gap between them. */
+  /* The mark: a loose leaf drawn only with its veins (brand/mark.svg). No tile here: it is cut
+     out of the text colour so it weighs the same as the wordmark; yellow in dark mode. */
   .mark {
-    width: 26px; height: 26px; border-radius: 6px; flex: none;
-    background: var(--tile) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cpath d='M26.2 67.2Q22.7 60.2 27.2 51.2M32.1 61.3Q26.9 52.6 30.9 43.1M38 55.4Q32.2 46.1 35.9 36.3M43.9 49.5Q38.3 40.5 42.1 30.8M49.8 43.6Q45.5 35.8 49.7 26.5M55.7 37.7Q53.6 32.1 58.5 23.5M61.6 31.8Q62.6 29.3 68.6 21.8M28.8 69.8Q35.8 73.3 44.8 68.8M34.7 63.9Q43.4 69.1 52.9 65.1M40.6 58Q49.9 63.8 59.7 60.1M46.5 52.1Q55.5 57.7 65.2 53.9M52.4 46.2Q60.2 50.5 69.5 46.3M58.3 40.3Q63.9 42.4 72.5 37.5M64.2 34.4Q66.7 33.4 74.2 27.4M24 72Q19 79 13 81' fill='none' stroke='%23ffe11a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain;
+    width: 22px; height: 22px; flex: none; background: var(--accent);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='10.3 18 67.7 66.7'%3E%3Cpath d='M24.9 66.9Q21.6 59.6 27 49M32.9 58.9Q27.8 49.8 32.7 38.7M40.9 50.9Q35.8 41.8 40.7 30.7M48.9 42.9Q45.6 35.6 51 25M56.9 34.9Q57.1 31.1 63.8 21.8M29.1 71.1Q36.4 74.4 47 69M37.1 63.1Q46.2 68.2 57.3 63.3M45.1 55.1Q54.2 60.2 65.3 55.3M53.1 47.1Q60.4 50.4 71 45M61.1 39.1Q64.9 38.9 74.2 32.2M24 72Q20 78 14 81' fill='none' stroke='%23000' stroke-width='5.5' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='10.3 18 67.7 66.7'%3E%3Cpath d='M24.9 66.9Q21.6 59.6 27 49M32.9 58.9Q27.8 49.8 32.7 38.7M40.9 50.9Q35.8 41.8 40.7 30.7M48.9 42.9Q45.6 35.6 51 25M56.9 34.9Q57.1 31.1 63.8 21.8M29.1 71.1Q36.4 74.4 47 69M37.1 63.1Q46.2 68.2 57.3 63.3M45.1 55.1Q54.2 60.2 65.3 55.3M53.1 47.1Q60.4 50.4 71 45M61.1 39.1Q64.9 38.9 74.2 32.2M24 72Q20 78 14 81' fill='none' stroke='%23000' stroke-width='5.5' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
   }
+  :root:not([data-theme="dark"]) .mark { background: var(--ink); }
   .brand { font: 600 18px/1 var(--brand); letter-spacing: -.01em; flex: 1; white-space: nowrap; }
   .icon { width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center; color: var(--mute); flex: none; }
   .icon:hover { background: var(--hover); color: var(--ink); }
