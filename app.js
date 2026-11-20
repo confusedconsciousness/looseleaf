@@ -225,7 +225,7 @@ addEventListener('hashchange', safe(() => {
 // Phones freeze background tabs without warning, so save the moment the page is hidden.
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
-setTheme(store('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+setTheme(store('theme') || 'dark'); // ink is the house look; the editor's menu switches to paper
 if (narrow()) document.body.classList.add('shut');
 
 /* ---------- sign-in ---------- */

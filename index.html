@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Looseleaf</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231b1b1f'/%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23f5c518'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23f5c518' transform='rotate(14 57 76)'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231f1f1c'/%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23f5c518'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23f5c518' transform='rotate(14 57 76)'/%3E%3C/svg%3E">
 
 <!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
      there is no build step. It needs the network on first load; to work offline or pin the
@@ -24,102 +24,156 @@
 </script>
 
 <style>
+  /* Looseleaf's look: flat, dense, one yellow accent on warm ink (dark) or cream paper (light),
+     with the sidebar drawn as a ruled sheet: numbered lines, a margin rule, punched holes. */
   :root {
-    --side: #faf9f6; --line: #e7e5df; --ink: #1b1b1f; --mute: #77756f;
-    --hover: #f0eee8; --on: #fff3c4; --accent: #f5c518; --danger: #c92a2a; --tile: #1b1b1f;
+    --bg: #f7f3e6; --panel: #fffdf5; --line: #dcd5c0; --rule: #cddbe9; --margin: #e59a93;
+    --ink: #1f1f1c; --mute: #7b776a; --hover: #ece6d3; --on: #ffe98a; --hole: #d6ceb6;
+    --accent: #f5c518; --accent-ink: #1f1f1c; --ok: #2f8f46; --danger: #b3261e; --tile: #1f1f1c;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     color-scheme: light;
   }
   :root[data-theme="dark"] {
-    --side: #18181b; --line: #2c2c31; --ink: #ececf1; --mute: #8d8d98;
-    --hover: #232329; --on: #3a3212; --accent: #f5c518; --danger: #ff8787; --tile: #2e2e36;
+    --bg: #1c1c19; --panel: #262622; --line: #33332e; --rule: #2a2a26; --margin: #6e3b34;
+    --ink: #f2f0e6; --mute: #96948a; --hover: #2a2a26; --on: #4a421c; --hole: #0e0e0c;
+    --ok: #5cba72; --danger: #ff8f7a; --tile: #33332e;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    display: flex; overflow: hidden; background: var(--side); color: var(--ink);
-    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; overflow: hidden; background: var(--bg); color: var(--ink);
+    font: 13px/1.4 var(--sans);
   }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   #side {
-    width: 248px; flex: none; display: flex; flex-direction: column;
+    width: 248px; flex: none; display: flex; flex-direction: column; background: var(--bg);
     border-right: 1px solid var(--line); transition: width .18s ease;
   }
-  #side header { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 10px 0 14px; flex: none; }
+  #side header { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px 0 14px; flex: none; }
   /* The mark: a double l, two sheets standing with one working loose. */
   .mark {
-    width: 20px; height: 20px; border-radius: 6px; flex: none;
+    width: 20px; height: 20px; border-radius: 5px; flex: none;
     background: var(--tile) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23f5c518'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23f5c518' transform='rotate(14 57 76)'/%3E%3C/svg%3E") center / contain;
   }
-  .brand { font-weight: 650; letter-spacing: -.01em; flex: 1; white-space: nowrap; }
-  .icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--mute); flex: none; }
+  .brand { font-size: 14px; font-weight: 650; letter-spacing: -.01em; flex: 1; white-space: nowrap; }
+  .icon { width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center; color: var(--mute); flex: none; }
   .icon:hover { background: var(--hover); color: var(--ink); }
-  .icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+  .icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 
   #new {
-    margin: 2px 10px 10px; height: 34px; border-radius: 9px; border: 1px dashed var(--line);
-    color: var(--mute); text-align: left; padding: 0 10px; flex: none;
+    margin: 2px 12px 14px; height: 32px; border-radius: 4px; border: 1px solid var(--line);
+    background: var(--panel); text-align: left; padding: 0 10px; flex: none;
   }
-  #new:hover { background: var(--hover); color: var(--ink); border-style: solid; }
+  #new b { font: 500 14px var(--mono); color: var(--accent); margin-right: 7px; }
+  :root:not([data-theme="dark"]) #new b { color: var(--ink); }
+  #new:hover { border-color: var(--accent); }
 
-  .label { padding: 4px 16px 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
-  #list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; }
-  #list li { display: flex; align-items: center; border-radius: 9px; margin-bottom: 2px; position: relative; }
-  #list li:hover { background: var(--hover); }
-  #list li.on { background: var(--on); }
-  #list li.on::before { content: ""; position: absolute; left: -8px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .label { font: 10.5px var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--mute); }
+  #side .label { padding: 0 14px 8px; }
+
+  /* The list is a ruled sheet: a line every 36px, a margin rule, and each row numbered in the
+     margin by a CSS counter. Both rules are backgrounds, so they run on below the last session. */
+  #list {
+    list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; counter-reset: sheet;
+    border-top: 1px solid var(--rule);
+    background:
+      linear-gradient(to right, transparent 37px, var(--margin) 37px 38px, transparent 38px),
+      repeating-linear-gradient(to bottom, transparent 0 35px, var(--rule) 35px 36px);
+    background-attachment: local;
+  }
+  #list li { display: flex; align-items: center; height: 36px; padding-right: 6px; counter-increment: sheet; }
+  #list li::before {
+    content: counter(sheet, decimal-leading-zero); width: 38px; padding-right: 9px; flex: none;
+    text-align: right; font: 10.5px var(--mono); color: var(--mute);
+  }
   #list .name {
-    flex: 1; min-width: 0; height: 36px; padding: 0 10px; text-align: left;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1; min-width: 0; height: 26px; margin-left: 6px; padding: 0 7px; border-radius: 3px;
+    text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  #list li.on .name { font-weight: 600; }
+  #list button.name:hover { background: var(--hover); }
+  /* The open session is marked the way you'd mark paper: a highlighter stroke. */
+  #list li.on button.name { background: var(--on); font-weight: 600; }
+  #list li.on::before { color: var(--ink); font-weight: 600; }
   #list input.name {
-    font: inherit; font-weight: 600; color: var(--ink); background: var(--side);
-    border: 1px solid var(--accent); border-radius: 7px; height: 30px; margin: 3px; outline: 0;
+    font: inherit; font-weight: 600; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--accent); outline: 0;
   }
-  #list .act { opacity: 0; width: 26px; height: 26px; margin-right: 2px; }
+  #list .act { opacity: 0; width: 24px; height: 24px; margin-left: 2px; }
   #list li:hover .act, #list li.on .act, #list .act:focus-visible { opacity: 1; }
   #list .act[data-do="remove"]:hover { color: var(--danger); }
 
-  #side footer { padding: 10px 10px 10px 16px; font-size: 12px; color: var(--mute); border-top: 1px solid var(--line); display: flex; align-items: center; flex: none; }
+  #side footer {
+    display: flex; align-items: center; flex: none; padding: 9px 8px 9px 14px;
+    border-top: 1px solid var(--line); font: 11px var(--mono); color: var(--mute);
+  }
   #status { flex: 1; display: flex; align-items: center; gap: 8px; }
-  #out { padding: 3px 7px; border-radius: 6px; }
-  #out:hover { background: var(--hover); color: var(--ink); }
-  #status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #2f9e44; }
+  #status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
   #status[data-s="saving"]::before { background: var(--accent); }
   #status[data-s="offline"]::before { background: var(--danger); }
+  #out { padding: 3px 6px; border-radius: 3px; }
+  #out:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
   #canvas { flex: 1; min-width: 0; height: 100%; }
 
   #login {
-    width: min(340px, calc(100vw - 32px)); padding: 28px; border: 1px solid var(--line); border-radius: 16px;
-    background: var(--side); color: var(--ink); box-shadow: 0 20px 60px #0004;
+    width: min(340px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--ink);
   }
-  #login::backdrop { background: #0009; backdrop-filter: blur(6px); }
-  #login form { display: grid; gap: 12px; }
-  #login h1 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  #login::backdrop { background: #000b; backdrop-filter: blur(6px); }
+  #login form { display: grid; gap: 8px; }
+  #login h1 { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
   #login input {
-    font: inherit; font-size: 16px; height: 42px; padding: 0 12px; border-radius: 10px;
-    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    font: 16px var(--sans); height: 40px; padding: 0 12px; border-radius: 4px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
   }
-  #login input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-  #login form > button { height: 42px; border-radius: 10px; background: var(--accent); color: #1b1b1f; font-weight: 600; }
-  #login form > button:hover { filter: brightness(1.06); }
-  #err { margin: 0; min-height: 1.4em; font-size: 13px; color: var(--danger); }
+  #login input:focus { outline: 0; border-color: var(--accent); }
+  #login form > button { height: 40px; border-radius: 4px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  #login form > button:hover { filter: brightness(1.07); }
+  #err { margin: 0; min-height: 1.5em; font-size: 12px; color: var(--danger); }
 
-  /* Collapsed: a slim rail that keeps only the toggle. */
-  body.shut #side { width: 44px; }
-  body.shut #side header { padding: 0 7px; }
-  body.shut #side .mark, body.shut .brand, body.shut #new, body.shut .label, body.shut #list, body.shut #side footer { display: none; }
+  /* Collapsed: a slim rail with the toggle and the sheet's three punched holes. */
+  body.shut #side {
+    width: 44px;
+    background:
+      radial-gradient(circle 5px at 50% 30%, var(--hole) 96%, transparent),
+      radial-gradient(circle 5px at 50% 52%, var(--hole) 96%, transparent),
+      radial-gradient(circle 5px at 50% 74%, var(--hole) 96%, transparent),
+      var(--bg);
+  }
+  body.shut #side header { padding: 0 8px; }
+  body.shut #side .mark, body.shut .brand, body.shut #new, body.shut #side .label, body.shut #list, body.shut #side footer { display: none; }
 
   @media (max-width: 700px) {
     /* On a phone the open sidebar floats over the canvas instead of squeezing it. */
-    body:not(.shut) #side { position: fixed; inset: 0 auto 0 0; z-index: 10; background: var(--side); box-shadow: 0 0 40px #0004; }
+    body:not(.shut) #side { position: fixed; inset: 0 auto 0 0; z-index: 10; box-shadow: 0 0 40px #0006; }
     body:not(.shut) #canvas { margin-left: 44px; }
   }
   @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
+
+  /* The editor's own chrome, recoloured through Excalidraw's theme variables so its accent is
+     Looseleaf's yellow (dark) or ink (light) instead of Excalidraw's purple. */
+  .excalidraw {
+    --color-primary: #1f1f1c; --color-primary-darker: #11110f; --color-primary-darkest: #000;
+    --color-primary-hover: #3a3a34; --color-primary-light: #fff0b3; --color-primary-light-darker: #ffe58a;
+    --color-brand-hover: #3a3a34; --color-brand-active: #000; --color-logo-text: #1f1f1c;
+    --color-surface-primary-container: #ffe58a; --color-on-primary-container: #1f1f1c;
+    --color-surface-high: #f1ecdb; --color-surface-mid: #f5f1e4; --color-surface-low: #efe9d6;
+    --focus-highlight-color: #f5c518; --link-color: #8a6a00;
+  }
+  .excalidraw.theme--dark {
+    --color-primary: #f5c518; --color-primary-darker: #f7cf3d; --color-primary-darkest: #fada63;
+    --color-primary-hover: #fada63; --color-primary-light: #4a421c; --color-primary-light-darker: #3d3616;
+    --color-brand-hover: #fada63; --color-brand-active: #ffe58a; --color-logo-text: #f2f0e6;
+    --color-surface-primary-container: #4a421c; --color-on-primary-container: #ffe9a3;
+    --color-surface-high: #33332e; --color-surface-mid: #1c1c19; --color-surface-low: #262622; --color-surface-lowest: #161614;
+    --island-bg-color: #262622; --popup-secondary-bg-color: #20201c;
+    --input-bg-color: #161614; --input-border-color: #33332e; --input-hover-bg-color: #20201c;
+    --focus-highlight-color: #f5c518; --link-color: #fada63;
+  }
 </style>
 </head>
 <body>
@@ -130,7 +184,7 @@
         <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>
       </button>
     </header>
-    <button id="new">+ New session</button>
+    <button id="new"><b>+</b>New session</button>
     <div class="label">Sessions</div>
     <ul id="list"></ul>
     <footer>
@@ -144,7 +198,8 @@
       <h1 id="login-title"><span class="mark"></span>Looseleaf</h1>
       <!-- A username field, hidden, so password managers offer to save and fill the password. -->
       <input type="text" autocomplete="username" value="looseleaf" hidden>
-      <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
+      <label class="label" for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
       <p id="err" role="alert"></p>
       <button>Sign in</button>
     </form>
