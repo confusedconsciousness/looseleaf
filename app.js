@@ -1,4 +1,4 @@
-// Code Yellow client: a sessions sidebar around the Excalidraw editor, synced through the server.
+// Looseleaf client: a sessions sidebar around the Excalidraw editor, synced through the server.
 // Organised top to bottom: state → server calls → sync (save / pull) → sessions → sidebar → events.
 import { createElement as h } from 'react';
 import { createRoot } from 'react-dom/client';

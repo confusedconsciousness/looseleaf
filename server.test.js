@@ -36,7 +36,7 @@ test('sign-in guards the API, and two devices saving the same session both keep 
   try {
     assert.equal((await req('GET', origin + '/')).status, 200); // the page itself is public
     assert.equal((await req('GET', base)).status, 401);
-    assert.equal((await req('GET', base, null, { cookie: 'cy=99999999999999.forged' })).status, 401);
+    assert.equal((await req('GET', base, null, { cookie: 'looseleaf=99999999999999.forged' })).status, 401);
     assert.equal((await req('POST', origin + '/api/login', { password: 'nope' })).status, 403);
     const login = await req('POST', origin + '/api/login', { password: process.env.PASSWORD });
     cookie = login.headers.get('set-cookie').split(';')[0];

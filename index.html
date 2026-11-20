@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Code Yellow</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23f5c518'/%3E%3C/svg%3E">
+<title>Looseleaf</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231b1b1f'/%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23f5c518'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23f5c518' transform='rotate(14 57 76)'/%3E%3C/svg%3E">
 
 <!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
      there is no build step. It needs the network on first load; to work offline or pin the
@@ -26,12 +26,12 @@
 <style>
   :root {
     --side: #faf9f6; --line: #e7e5df; --ink: #1b1b1f; --mute: #77756f;
-    --hover: #f0eee8; --on: #fff3c4; --accent: #f5c518; --danger: #c92a2a;
+    --hover: #f0eee8; --on: #fff3c4; --accent: #f5c518; --danger: #c92a2a; --tile: #1b1b1f;
     color-scheme: light;
   }
   :root[data-theme="dark"] {
     --side: #18181b; --line: #2c2c31; --ink: #ececf1; --mute: #8d8d98;
-    --hover: #232329; --on: #3a3212; --accent: #f5c518; --danger: #ff8787;
+    --hover: #232329; --on: #3a3212; --accent: #f5c518; --danger: #ff8787; --tile: #2e2e36;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -48,7 +48,11 @@
     border-right: 1px solid var(--line); transition: width .18s ease;
   }
   #side header { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 10px 0 14px; flex: none; }
-  .mark { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); flex: none; }
+  /* The mark: a double l, two sheets standing with one working loose. */
+  .mark {
+    width: 20px; height: 20px; border-radius: 6px; flex: none;
+    background: var(--tile) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23f5c518'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23f5c518' transform='rotate(14 57 76)'/%3E%3C/svg%3E") center / contain;
+  }
   .brand { font-weight: 650; letter-spacing: -.01em; flex: 1; white-space: nowrap; }
   .icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--mute); flex: none; }
   .icon:hover { background: var(--hover); color: var(--ink); }
@@ -121,7 +125,7 @@
 <body>
   <aside id="side">
     <header>
-      <span class="mark"></span><span class="brand">Code Yellow</span>
+      <span class="mark"></span><span class="brand">Looseleaf</span>
       <button class="icon" id="toggle" aria-label="Toggle sessions" title="Toggle sessions">
         <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>
       </button>
@@ -137,9 +141,9 @@
   <main id="canvas"></main>
   <dialog id="login" aria-labelledby="login-title">
     <form>
-      <h1 id="login-title"><span class="mark"></span>Code Yellow</h1>
+      <h1 id="login-title"><span class="mark"></span>Looseleaf</h1>
       <!-- A username field, hidden, so password managers offer to save and fill the password. -->
-      <input type="text" autocomplete="username" value="code-yellow" hidden>
+      <input type="text" autocomplete="username" value="looseleaf" hidden>
       <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
       <p id="err" role="alert"></p>
       <button>Sign in</button>

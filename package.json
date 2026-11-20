@@ -1,8 +1,18 @@
 {
-  "name": "code-yellow",
+  "name": "looseleaf",
   "private": true,
   "license": "MIT",
-  "engines": { "node": ">=22.5" },
-  "scripts": { "start": "node server.js", "test": "node --test" },
-  "dependencies": { "pg": "^8.13.0" }
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env.local server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@neon/config": "^1.14.5"
+  }
 }

@@ -1,4 +1,4 @@
-// Code Yellow server: static files, sign-in, sessions API, live sync (needs Node 22.5+).
+// Looseleaf server: static files, sign-in, sessions API, live sync (needs Node 22.5+).
 // Node built-ins only, plus `pg` when DATABASE_URL points at Postgres.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -23,7 +23,7 @@ if (process.env.DATABASE_URL) {
   q = async (sql, params = []) => (await pool.query(sql, params)).rows;
 } else {
   const { DatabaseSync } = require('node:sqlite');
-  const lite = new DatabaseSync(process.env.DB || path.join(__dirname, 'code-yellow.db'));
+  const lite = new DatabaseSync(process.env.DB || path.join(__dirname, 'looseleaf.db'));
   q = async (sql, params = []) => {
     const st = lite.prepare(sql.replace(/\$(\d+)/g, '?$1'));
     return /^\s*SELECT/i.test(sql) ? st.all(...params) : (st.run(...params), []);
@@ -77,7 +77,7 @@ function validate(body) {
 // derived from the password: nothing to store, it survives restarts, and changing the password
 // signs every device out.
 const MONTH = 30 * 24 * 60 * 60;
-const KEY = crypto.createHash('sha256').update('code-yellow session ' + PASSWORD).digest();
+const KEY = crypto.createHash('sha256').update('looseleaf session ' + PASSWORD).digest();
 const sign = (exp) => exp + '.' + crypto.createHmac('sha256', KEY).update(String(exp)).digest('base64url');
 const same = (a, b) => {
   const hash = (s) => crypto.createHash('sha256').update(s).digest();
@@ -85,12 +85,12 @@ const same = (a, b) => {
 };
 function authed(req) {
   if (!PASSWORD) return true; // local use: the server only listens on this machine
-  const token = /(?:^|; )cy=([^;]+)/.exec(req.headers.cookie || '')?.[1] || '';
+  const token = /(?:^|; )looseleaf=([^;]+)/.exec(req.headers.cookie || '')?.[1] || '';
   const exp = +token.split('.')[0];
   return exp > Date.now() && same(token, sign(exp));
 }
 const cookie = (req, value, maxAge) =>
-  `cy=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}` + (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '');
+  `looseleaf=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}` + (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '');
 
 // ponytail: one global count of wrong passwords, so a burst of guesses also blocks you from
 // signing in on a new device for 15 minutes (devices already signed in keep working). Count per
@@ -220,7 +220,7 @@ if (require.main === module) {
     console.error('Refusing to listen on ' + HOST + ' without a password of at least 12 characters. Set PASSWORD=...');
     process.exit(1);
   }
-  server.listen(PORT, HOST, () => console.log(`Code Yellow on http://${HOST}:${PORT} (${process.env.DATABASE_URL ? 'Postgres' : 'SQLite'}${PASSWORD ? ', sign-in on' : ''})`));
+  server.listen(PORT, HOST, () => console.log(`Looseleaf on http://${HOST}:${PORT} (${process.env.DATABASE_URL ? 'Postgres' : 'SQLite'}${PASSWORD ? ', sign-in on' : ''})`));
 }
 
 module.exports = { merge, validate, server };

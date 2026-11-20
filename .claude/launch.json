@@ -1,6 +1,14 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "code-yellow", "runtimeExecutable": "node", "runtimeArgs": ["server.js"], "port": 4322 }
+    {
+      "name": "looseleaf",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file-if-exists=.env.local",
+        "server.js"
+      ],
+      "port": 4322
+    }
   ]
 }
