@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Looseleaf</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231c1c19'/%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23ffe11a'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23ffe11a' transform='rotate(14 57 76)'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231c1c19'/%3E%3Cpath d='M26.2 67.2Q22.7 60.2 27.2 51.2M32.1 61.3Q26.9 52.6 30.9 43.1M38 55.4Q32.2 46.1 35.9 36.3M43.9 49.5Q38.3 40.5 42.1 30.8M49.8 43.6Q45.5 35.8 49.7 26.5M55.7 37.7Q53.6 32.1 58.5 23.5M61.6 31.8Q62.6 29.3 68.6 21.8M28.8 69.8Q35.8 73.3 44.8 68.8M34.7 63.9Q43.4 69.1 52.9 65.1M40.6 58Q49.9 63.8 59.7 60.1M46.5 52.1Q55.5 57.7 65.2 53.9M52.4 46.2Q60.2 50.5 69.5 46.3M58.3 40.3Q63.9 42.4 72.5 37.5M64.2 34.4Q66.7 33.4 74.2 27.4M24 72Q19 79 13 81' fill='none' stroke='%23ffe11a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
 
 <!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
      there is no build step. It needs the network on first load; to work offline or pin the
      supply chain, `npm i @excalidraw/excalidraw react react-dom` and bundle with Vite. -->
+<!-- The wordmark's font, subset to the letters of "looseleaf" so it's a few KB. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&text=looseleaf&display=swap">
 <link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/index.css">
 <script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/';</script>
 <script type="importmap">
@@ -30,6 +32,7 @@
     --bg: #fafaf7; --panel: #ffffff; --line: #e4e2da; --ink: #1c1c19; --mute: #77756c;
     --hover: #f0efe9; --on: #e8e6dd; --accent: #ffe11a; --accent-ink: #1c1c19;
     --ok: #2f8f46; --danger: #b3261e; --tile: #1c1c19;
+    --brand: Fraunces, Georgia, serif;
     --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     color-scheme: light;
@@ -53,12 +56,12 @@
     border-right: 1px solid var(--line); transition: width .18s ease;
   }
   #side header { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px 0 14px; flex: none; }
-  /* The mark: a double l, two sheets standing with one working loose. */
+  /* The mark: a loose leaf drawn only with its veins; the midrib is the gap between them. */
   .mark {
-    width: 20px; height: 20px; border-radius: 5px; flex: none;
-    background: var(--tile) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect x='28' y='20' width='14' height='56' rx='7' fill='%23ffe11a'/%3E%3Crect x='50' y='20' width='14' height='56' rx='7' fill='%23ffe11a' transform='rotate(14 57 76)'/%3E%3C/svg%3E") center / contain;
+    width: 26px; height: 26px; border-radius: 6px; flex: none;
+    background: var(--tile) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cpath d='M26.2 67.2Q22.7 60.2 27.2 51.2M32.1 61.3Q26.9 52.6 30.9 43.1M38 55.4Q32.2 46.1 35.9 36.3M43.9 49.5Q38.3 40.5 42.1 30.8M49.8 43.6Q45.5 35.8 49.7 26.5M55.7 37.7Q53.6 32.1 58.5 23.5M61.6 31.8Q62.6 29.3 68.6 21.8M28.8 69.8Q35.8 73.3 44.8 68.8M34.7 63.9Q43.4 69.1 52.9 65.1M40.6 58Q49.9 63.8 59.7 60.1M46.5 52.1Q55.5 57.7 65.2 53.9M52.4 46.2Q60.2 50.5 69.5 46.3M58.3 40.3Q63.9 42.4 72.5 37.5M64.2 34.4Q66.7 33.4 74.2 27.4M24 72Q19 79 13 81' fill='none' stroke='%23ffe11a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain;
   }
-  .brand { font-size: 14px; font-weight: 650; letter-spacing: -.01em; flex: 1; white-space: nowrap; }
+  .brand { font: 600 18px/1 var(--brand); letter-spacing: -.01em; flex: 1; white-space: nowrap; }
   .icon { width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center; color: var(--mute); flex: none; }
   .icon:hover { background: var(--hover); color: var(--ink); }
   .icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
@@ -120,7 +123,7 @@
   }
   #login::backdrop { background: #000b; backdrop-filter: blur(6px); }
   #login form { display: grid; gap: 8px; }
-  #login h1 { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  #login h1 { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font: 600 20px/1 var(--brand); letter-spacing: -.01em; }
   #login input {
     font: 16px var(--sans); height: 40px; padding: 0 12px; border-radius: 4px;
     border: 1px solid var(--line); background: var(--panel); color: var(--ink);
@@ -167,7 +170,7 @@
 <body>
   <aside id="side">
     <header>
-      <span class="mark"></span><span class="brand">Looseleaf</span>
+      <span class="mark"></span><span class="brand">looseleaf</span>
       <button class="icon" id="toggle" aria-label="Toggle sessions" title="Toggle sessions">
         <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>
       </button>
@@ -183,7 +186,7 @@
   <main id="canvas"></main>
   <dialog id="login" aria-labelledby="login-title">
     <form>
-      <h1 id="login-title"><span class="mark"></span>Looseleaf</h1>
+      <h1 id="login-title"><span class="mark"></span>looseleaf</h1>
       <!-- A username field, hidden, so password managers offer to save and fill the password. -->
       <input type="text" autocomplete="username" value="looseleaf" hidden>
       <label class="label" for="pw">Password</label>
