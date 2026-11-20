@@ -18,6 +18,8 @@ let saved = 0;        // scene version the server already has
 let sent = new Set(); // image file ids the server already has
 let timer = 0;        // pending save
 let theme = 'light';
+let library = [];     // Excalidraw library items, shared by every session on this device
+let pendingLib = '';  // a library URL waiting for the editor to mount
 
 const STATUS = { synced: 'Synced', saving: 'Saving…', offline: 'Offline. Retrying…' };
 function status(s) {
@@ -112,9 +114,16 @@ async function open(id) {
   if (location.hash.slice(1) !== id) location.hash = id;
   root.render(h(Excalidraw, {
     key: id, // a new key remounts the editor, so each session gets its own canvas and undo stack
-    excalidrawAPI: (a) => (api = a),
+    excalidrawAPI: (a) => {
+      api = a;
+      if (pendingLib) safe(addLibrary)();
+    },
     onChange,
-    initialData: { elements: s.elements, files: s.files, appState: { theme }, scrollToContent: true },
+    onLibraryChange: (items) => {
+      library = items;
+      store('library', JSON.stringify(items));
+    },
+    initialData: { elements: s.elements, files: s.files, libraryItems: library, appState: { theme }, scrollToContent: true },
   }, MENU));
   if (narrow()) document.body.classList.add('shut');
   draw();
@@ -144,6 +153,37 @@ async function remove(s) {
   if (!confirm(`Delete “${s.name}”? This can't be undone.`)) return;
   await call('DELETE', `/api/sessions/${s.id}?client=${client}`);
   await refresh();
+}
+
+/* ---------- libraries ---------- */
+
+// "Browse libraries" opens libraries.excalidraw.com, which sends you back to this page with
+// #addLibrary=<url>. That hash isn't a session id, so take it out before routing sees it.
+// ponytail: the library lives in this device's localStorage (about 5 MB), so it doesn't sync.
+// To sync it, store it on the server beside the sessions and broadcast a 'library' event.
+function takeLibrary() {
+  const url = new URLSearchParams(location.hash.slice(1)).get('addLibrary');
+  if (!url) return false;
+  history.replaceState(null, '', cur ? '#' + cur : location.pathname + location.search);
+  pendingLib = url;
+  if (api) safe(addLibrary)();
+  return true;
+}
+
+// Only Excalidraw's own library site and its GitHub repository, the same hosts Excalidraw allows.
+async function addLibrary() {
+  const url = new URL(pendingLib);
+  pendingLib = '';
+  const ok = url.protocol === 'https:' && (/(^|\.)excalidraw\.com$/.test(url.hostname) ||
+    (url.hostname === 'raw.githubusercontent.com' && url.pathname.startsWith('/excalidraw/excalidraw-libraries/')));
+  if (!ok) return;
+  await api.updateLibrary({
+    libraryItems: fetch(url).then((r) => r.blob()),
+    prompt: true, // asks before adding, since anyone can send a link with this hash
+    merge: true,
+    defaultStatus: 'published',
+    openLibraryMenu: true,
+  });
 }
 
 /* ---------- sidebar ---------- */
@@ -219,12 +259,15 @@ $('list').ondblclick = (e) => {
 $('new').onclick = safe(create);
 $('toggle').onclick = () => document.body.classList.toggle('shut');
 addEventListener('hashchange', safe(() => {
+  if (takeLibrary()) return;
   const id = location.hash.slice(1);
   if (sessions.some((s) => s.id === id)) return open(id);
 }));
 // Phones freeze background tabs without warning, so save the moment the page is hidden.
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
+try { library = JSON.parse(store('library')) || []; } catch {}
+takeLibrary();
 setTheme(store('theme') || 'dark'); // ink is the house look; the editor's menu switches to paper
 if (narrow()) document.body.classList.add('shut');
 

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logo Directions</title>
+<style>
+  :root {
+    --bg: #fafaf7; --panel: #ffffff; --line: #e4e2da; --ink: #1c1c19; --mute: #77756c;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141412; --panel: #1c1c19; --line: #2c2c28; --ink: #f4f3ee; --mute: #96948a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); }
+  main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 22px; font-weight: 650; letter-spacing: -.015em; margin: 0 0 4px; }
+  .lede { color: var(--mute); margin: 0 0 32px; max-width: 64ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .stage { background: #1c1c19; border-radius: 5px; height: 230px; display: grid; place-items: center; }
+  .stage svg { width: 200px; height: 200px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 12px 6px 0; }
+  .row svg { width: 44px; height: 44px; }
+  .row .s32 { width: 32px; height: 32px; margin-left: auto; } .row .s20 { width: 20px; height: 20px; } .row .s16 { width: 16px; height: 16px; }
+  .meta { padding: 14px 6px 6px; }
+  .num { font: 10.5px var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--mute); }
+  h2 { font-size: 15px; font-weight: 650; margin: 2px 0 4px; letter-spacing: -.01em; }
+  .meta p { margin: 0; color: var(--mute); }
+
+  /* Each mark is drawn once with three roles and recoloured per variant:
+     --g the ground, --k the ink, --y the accent. k2…k4 are ink mixed toward the ground. */
+  svg .g { fill: var(--g); } svg .k { fill: var(--k); } svg .y { fill: var(--y); }
+  svg .gs, svg .ks, svg .ys, svg .k2s, svg .k3s, svg .k4s { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg .gs { stroke: var(--g); } svg .ks { stroke: var(--k); } svg .ys { stroke: var(--y); }
+  svg .k2s { stroke: color-mix(in srgb, var(--k) 62%, var(--g)); }
+  svg .k3s { stroke: color-mix(in srgb, var(--k) 38%, var(--g)); }
+  svg .k4s { stroke: color-mix(in srgb, var(--k) 20%, var(--g)); }
+  svg .butt { stroke-linecap: butt; }
+  .dark { --g: #1c1c19; --k: #f4f3ee; --y: #ffe11a; }
+  .sun  { --g: #ffe11a; --k: #8f7b00; --y: #1c1c19; }
+  .mono { --g: #fafaf7; --k: #1c1c19; --y: #1c1c19; }
+  @media (prefers-color-scheme: dark) { .mono { --g: #30302b; --k: #f4f3ee; --y: #f4f3ee; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Logo directions, round two</h1>
+  <p class="lede">Each mark is built with a different technique: hatching, negative space, metaballs,
+    dithering and linework. Each one is tied to something the whiteboard actually does. Every mark is shown
+    on the ink ground, on yellow, in one colour, and at 32, 20 and 16 px.</p>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+  const f = n => +n.toFixed(1);
+  const P = p => `${f(p[0])} ${f(p[1])}`;
+  let seed = 11;
+  const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  const jit = a => (rnd() * 2 - 1) * a;
+
+  // Excalidraw draws a line as a slightly bowed stroke that overshoots its ends.
+  function rough(x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+    const a = 1 + rnd() * 2, b = 1 + rnd() * 2, bow = jit(1.2);
+    const sx = x1 - ux * a, sy = y1 - uy * a, ex = x2 + ux * b, ey = y2 + uy * b;
+    return `M${f(sx)} ${f(sy)} Q${f((sx + ex) / 2 - uy * bow)} ${f((sy + ey) / 2 + ux * bow)} ${f(ex)} ${f(ey)}`;
+  }
+
+  // 01: a rectangle filled the way Excalidraw fills one, with hachure.
+  function hachure() {
+    seed = 5;
+    const x0 = 22, y0 = 20, x1 = 74, y1 = 76, hatch = [];
+    for (let c = x0 + y0 + 6; c < x1 + y1 - 4; c += 6.4) {
+      const ax = Math.max(x0 + 2, c - y1 + 2), bx = Math.min(x1 - 2, c - y0 - 2);
+      if (bx - ax > 2) hatch.push(rough(ax, c - ax, bx, c - bx));
+    }
+    const box = o => [rough(x0 + o, y0, x1, y0 + o), rough(x1, y0, x1 - o, y1), rough(x1, y1 - o, x0, y1), rough(x0 - o, y1, x0, y0)].join(' ');
+    return `<path d="${hatch.join(' ')}" class="ys" stroke-width="2.6"/>
+      <path d="${box(0)}" class="ks" stroke-width="2.8"/><path d="${box(1.4)}" class="ks" stroke-width="1.6"/>`;
+  }
+
+  // 03: drops joined by a liquid neck (Hiroyuki Sato's metaball construction).
+  function neck([x1, y1, r1], [x2, y2, r2], v = .5, hs = 2.4) {
+    const d = Math.hypot(x2 - x1, y2 - y1), ab = Math.atan2(y2 - y1, x2 - x1);
+    const u1 = d < r1 + r2 ? Math.acos((r1 * r1 + d * d - r2 * r2) / (2 * r1 * d)) : 0;
+    const u2 = d < r1 + r2 ? Math.acos((r2 * r2 + d * d - r1 * r1) / (2 * r2 * d)) : 0;
+    const ms = Math.acos((r1 - r2) / d);
+    const a1 = ab + u1 + (ms - u1) * v, a2 = ab - u1 - (ms - u1) * v;
+    const a3 = ab + Math.PI - u2 - (Math.PI - u2 - ms) * v, a4 = ab - Math.PI + u2 + (Math.PI - u2 - ms) * v;
+    const pt = (x, y, r, a) => [x + r * Math.cos(a), y + r * Math.sin(a)];
+    const p1 = pt(x1, y1, r1, a1), p2 = pt(x1, y1, r1, a2), p3 = pt(x2, y2, r2, a3), p4 = pt(x2, y2, r2, a4);
+    const k = Math.min(v * hs, Math.hypot(p1[0] - p3[0], p1[1] - p3[1]) / (r1 + r2)) * Math.min(1, d * 2 / (r1 + r2));
+    const h1 = pt(...p1, r1 * k, a1 - Math.PI / 2), h2 = pt(...p2, r1 * k, a2 + Math.PI / 2);
+    const h3 = pt(...p3, r2 * k, a3 + Math.PI / 2), h4 = pt(...p4, r2 * k, a4 - Math.PI / 2);
+    return `M${P(p1)} C${P(h1)} ${P(h3)} ${P(p3)} L${P(p4)} C${P(h4)} ${P(h2)} ${P(p2)} Z`;
+  }
+  function fuse() {
+    const A = [33, 61, 17], B = [63, 38, 11.5], C = [79, 23, 5.5];
+    return `<g class="y"><path d="${neck(A, B)} ${neck(B, C, .55)}"/>
+      ${[A, B, C].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`;
+  }
+
+  // 05: a sheet that breaks into ordered-dither pixels as it leaves for another device.
+  function dissolve() {
+    const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    let px = '';
+    for (let cx = 0; cx < 8; cx++) for (let cy = 0; cy < 14; cy++) {
+      const density = 1 - (cx + .6) / 8.5;
+      if ((bayer[(cy % 4) * 4 + (cx % 4)] + .5) / 16 < density) px += `<rect x="${f(50.4 + cx * 4)}" y="${f(20.4 + cy * 4)}" width="3.2" height="3.2"/>`;
+    }
+    for (const [x, y] of [[86.4, 28.4], [82.4, 52.4], [90.4, 64.4]]) px += `<rect x="${x}" y="${y}" width="3.2" height="3.2"/>`;
+    return `<g class="y"><path d="M50 20 H22 a4 4 0 0 0 -4 4 V72 a4 4 0 0 0 4 4 H50 Z"/>${px}</g>`;
+  }
+
+  // 06: a leaf drawn only with its veins, like a feather. The midrib is the gap between them.
+  function vein() {
+    const B = [24, 72], L = 70.7, W = 18, u = [Math.SQRT1_2, -Math.SQRT1_2], n = [-Math.SQRT1_2, -Math.SQRT1_2];
+    const at = (t, off) => [B[0] + u[0] * t * L + n[0] * off, B[1] + u[1] * t * L + n[1] * off];
+    let d = '';
+    for (const s of [1, -1]) for (let i = 0; i < 7; i++) {
+      const t = .07 + i * .118, t2 = Math.min(t + .17, .99), w = W * Math.pow(Math.sin(Math.PI * t2), .8);
+      d += `M${P(at(t, s * 1.8))} Q${P(at(t + .035, s * w * .7))} ${P(at(t2, s * w * .94))} `;
+    }
+    return `<path d="${d}" class="ys" stroke-width="2.6"/><path d="M24 72 Q19 79 13 81" class="ys" stroke-width="2.6"/>`;
+  }
+
+  // 07: the circle you draw round an idea on a whiteboard, drawn twice as Excalidraw does.
+  function circled() {
+    seed = 3;
+    const loop = (a0, sweep, rx, ry, amp) => {
+      const ph = rnd() * 6, pts = [], r = -.17;
+      for (let a = a0; a <= a0 + sweep; a += .07) {
+        const w = 1 + amp * Math.sin(a * 2 + ph) * .03, x = Math.cos(a) * rx * w, y = Math.sin(a) * ry * w;
+        pts.push(`${f(48 + x * Math.cos(r) - y * Math.sin(r))} ${f(50 + x * Math.sin(r) + y * Math.cos(r))}`);
+      }
+      return 'M' + pts.join(' L');
+    };
+    return `<path d="${loop(3.7, 6.9, 32, 25, 1)}" class="ks" stroke-width="3.2"/>
+      <path d="${loop(3.3, 6.6, 33.5, 24, 1.6)}" class="ks" stroke-width="1.7"/>
+      <path d="M48 33 Q50 48 63 50 Q50 52 48 67 Q46 52 33 50 Q46 48 48 33 Z" class="y"/>`;
+  }
+
+  // 08: an endless ribbon whose face flips from yellow to ink as it crosses itself.
+  function endless() {
+    const pt = t => { const s = Math.sin(t), c = Math.cos(t), q = 1 + s * s; return `${f(48 + 33 * c / q)} ${f(48 + 33 * s * c / q)}`; };
+    const arc = (a, b) => { const p = []; for (let i = 0; i <= 60; i++) p.push(pt(a + (b - a) * i / 60)); return 'M' + p.join(' L'); };
+    const h = Math.PI / 2, e = .42;
+    return `<path d="${arc(h, 3 * h)}" class="k2s" stroke-width="11"/>
+      <path d="${arc(-h, h)}" class="ys" stroke-width="11"/>
+      <path d="${arc(h - e, h + e)}" class="gs butt" stroke-width="17"/>
+      <path d="${arc(h - e - .02, h)}" class="ys butt" stroke-width="11"/>
+      <path d="${arc(h, h + e + .02)}" class="k2s butt" stroke-width="11"/>`;
+  }
+
+  // 10: one stroke and its echoes, the same edit arriving on each device a moment later.
+  function echo() {
+    const wave = (x, y) => `M${x} ${y} C${x + 13} ${y - 15} ${x + 25} ${y - 15} ${x + 33} ${y} S${x + 53} ${y + 15} ${x + 66} ${y}`;
+    // Pure vertical offsets of one curve never cross, so the echoes nest like engraved lines.
+    return ['k4s', 'k3s', 'k2s'].map((c, i) => `<path d="${wave(15, 64 - i * 10)}" class="${c}" stroke-width="3.5"/>`).join('') +
+      `<path d="${wave(15, 32)}" class="ys" stroke-width="6.5"/>`;
+  }
+
+  const MARKS = [
+    ['Hachure', 'Excalidraw fills a shape with hachure: loose diagonal strokes inside an outline drawn twice. The engine underneath this app becomes the mark.', hachure()],
+
+    ['Nib', 'A pen nib cut out of a yellow disc, resting on the line it writes. The slit in the nib continues the line in yellow.', `
+      <circle cx="48" cy="48" r="32" class="y"/>
+      <path d="M24 48 Q42 45.5 56 33 L64 39 V57 L56 63 Q42 50.5 24 48 Z" class="g"/>
+      <path d="M6 48 H25 M63 48 H90" class="gs" stroke-width="3"/>
+      <path d="M28 48 H48" class="ys" stroke-width="1.6"/><circle cx="52" cy="48" r="3.4" class="y"/>`],
+
+    ['Fuse', 'An edit leaves one device as a drop and arrives at the next. Liquid necks join the drops, so sync reads as one substance.', fuse()],
+
+    ['Two Screens', 'Two devices side by side with one stroke cut through both. In the gap the line disappears but carries on: the same drawing on both.', `
+      <rect x="16" y="18" width="29" height="60" rx="8" class="y"/>
+      <rect x="51" y="18" width="29" height="60" rx="8" class="k"/>
+      <path d="M4 56 C18 56 22 36 36 36 C50 36 46 60 60 60 C74 60 78 40 92 40" class="gs" stroke-width="6"/>`],
+
+    ['Dissolve', 'A sheet breaks into dithered pixels on its way to your other screens. The solid edge is here, and the scatter is in transit.', dissolve()],
+
+    ['Vein', 'A loose leaf drawn only with its veins, like a feather. The midrib is the gap between the strokes.', vein()],
+
+    ['Circled', 'The marker circle you draw round the good idea on a whiteboard. It overshoots its start and is drawn twice, as Excalidraw strokes are.', circled()],
+
+    ['Endless', 'The infinite canvas as a ribbon with no end. Its face flips from yellow to ink where it crosses over itself.', endless()],
+
+    ['Bleed', 'Printer’s crop marks frame the page, and the stroke runs straight past them. A canvas with no edges.', `
+      <path d="M10 26 H21 M26 10 V21 M75 26 H86 M70 10 V21 M10 70 H21 M26 75 V86 M75 70 H86 M70 75 V86" class="ks" stroke-width="2.6"/>
+      <path d="M12 72 C30 36 42 76 56 46 S78 24 88 16" class="ys" stroke-width="10"/>`],
+
+    ['Echo', 'One bright stroke above its fading echoes: the same edit arriving on each device a beat later.', echo()],
+  ];
+
+  const tile = (cls, inner, size = '') =>
+    `<svg viewBox="0 0 96 96" class="${cls} ${size}" role="img"><rect width="96" height="96" rx="22" class="g"/>${inner}</svg>`;
+
+  document.getElementById('grid').innerHTML = MARKS.map(([name, idea, svg], i) => `
+    <article class="card">
+      <div class="stage">${tile('dark', svg)}</div>
+      <div class="row">${tile('sun', svg)}${tile('mono', svg)}${tile('dark', svg, 's32')}${tile('dark', svg, 's20')}${tile('dark', svg, 's16')}</div>
+      <div class="meta">
+        <div class="num">${String(i + 1).padStart(2, '0')}</div>
+        <h2>${name}</h2>
+        <p>${idea}</p>
+      </div>
+    </article>`).join('');
+</script>
+</body>
+</html>
