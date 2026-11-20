@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Code Yellow</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23f5c518'/%3E%3C/svg%3E">
+
+<!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
+     there is no build step. It needs the network on first load; to work offline or pin the
+     supply chain, `npm i @excalidraw/excalidraw react react-dom` and bundle with Vite. -->
+<link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/index.css">
+<script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/';</script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "@excalidraw/excalidraw": "https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/index.js?external=react,react-dom"
+  }
+}
+</script>
+
+<style>
+  :root {
+    --side: #faf9f6; --line: #e7e5df; --ink: #1b1b1f; --mute: #77756f;
+    --hover: #f0eee8; --on: #fff3c4; --accent: #f5c518; --danger: #c92a2a;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --side: #18181b; --line: #2c2c31; --ink: #ececf1; --mute: #8d8d98;
+    --hover: #232329; --on: #3a3212; --accent: #f5c518; --danger: #ff8787;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; overflow: hidden; background: var(--side); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  #side {
+    width: 248px; flex: none; display: flex; flex-direction: column;
+    border-right: 1px solid var(--line); transition: width .18s ease;
+  }
+  #side header { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 10px 0 14px; flex: none; }
+  .mark { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); flex: none; }
+  .brand { font-weight: 650; letter-spacing: -.01em; flex: 1; white-space: nowrap; }
+  .icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--mute); flex: none; }
+  .icon:hover { background: var(--hover); color: var(--ink); }
+  .icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+
+  #new {
+    margin: 2px 10px 10px; height: 34px; border-radius: 9px; border: 1px dashed var(--line);
+    color: var(--mute); text-align: left; padding: 0 10px; flex: none;
+  }
+  #new:hover { background: var(--hover); color: var(--ink); border-style: solid; }
+
+  .label { padding: 4px 16px 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+  #list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; }
+  #list li { display: flex; align-items: center; border-radius: 9px; margin-bottom: 2px; position: relative; }
+  #list li:hover { background: var(--hover); }
+  #list li.on { background: var(--on); }
+  #list li.on::before { content: ""; position: absolute; left: -8px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  #list .name {
+    flex: 1; min-width: 0; height: 36px; padding: 0 10px; text-align: left;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #list li.on .name { font-weight: 600; }
+  #list input.name {
+    font: inherit; font-weight: 600; color: var(--ink); background: var(--side);
+    border: 1px solid var(--accent); border-radius: 7px; height: 30px; margin: 3px; outline: 0;
+  }
+  #list .act { opacity: 0; width: 26px; height: 26px; margin-right: 2px; }
+  #list li:hover .act, #list li.on .act, #list .act:focus-visible { opacity: 1; }
+  #list .act[data-do="remove"]:hover { color: var(--danger); }
+
+  #side footer { padding: 10px 10px 10px 16px; font-size: 12px; color: var(--mute); border-top: 1px solid var(--line); display: flex; align-items: center; flex: none; }
+  #status { flex: 1; display: flex; align-items: center; gap: 8px; }
+  #out { padding: 3px 7px; border-radius: 6px; }
+  #out:hover { background: var(--hover); color: var(--ink); }
+  #status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #2f9e44; }
+  #status[data-s="saving"]::before { background: var(--accent); }
+  #status[data-s="offline"]::before { background: var(--danger); }
+
+  #canvas { flex: 1; min-width: 0; height: 100%; }
+
+  #login {
+    width: min(340px, calc(100vw - 32px)); padding: 28px; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--side); color: var(--ink); box-shadow: 0 20px 60px #0004;
+  }
+  #login::backdrop { background: #0009; backdrop-filter: blur(6px); }
+  #login form { display: grid; gap: 12px; }
+  #login h1 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  #login input {
+    font: inherit; font-size: 16px; height: 42px; padding: 0 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+  }
+  #login input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  #login form > button { height: 42px; border-radius: 10px; background: var(--accent); color: #1b1b1f; font-weight: 600; }
+  #login form > button:hover { filter: brightness(1.06); }
+  #err { margin: 0; min-height: 1.4em; font-size: 13px; color: var(--danger); }
+
+  /* Collapsed: a slim rail that keeps only the toggle. */
+  body.shut #side { width: 44px; }
+  body.shut #side header { padding: 0 7px; }
+  body.shut #side .mark, body.shut .brand, body.shut #new, body.shut .label, body.shut #list, body.shut #side footer { display: none; }
+
+  @media (max-width: 700px) {
+    /* On a phone the open sidebar floats over the canvas instead of squeezing it. */
+    body:not(.shut) #side { position: fixed; inset: 0 auto 0 0; z-index: 10; background: var(--side); box-shadow: 0 0 40px #0004; }
+    body:not(.shut) #canvas { margin-left: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
+</style>
+</head>
+<body>
+  <aside id="side">
+    <header>
+      <span class="mark"></span><span class="brand">Code Yellow</span>
+      <button class="icon" id="toggle" aria-label="Toggle sessions" title="Toggle sessions">
+        <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>
+      </button>
+    </header>
+    <button id="new">+ New session</button>
+    <div class="label">Sessions</div>
+    <ul id="list"></ul>
+    <footer>
+      <div id="status" role="status">Synced</div>
+      <button id="out" hidden>Sign out</button>
+    </footer>
+  </aside>
+  <main id="canvas"></main>
+  <dialog id="login" aria-labelledby="login-title">
+    <form>
+      <h1 id="login-title"><span class="mark"></span>Code Yellow</h1>
+      <!-- A username field, hidden, so password managers offer to save and fill the password. -->
+      <input type="text" autocomplete="username" value="code-yellow" hidden>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
+      <p id="err" role="alert"></p>
+      <button>Sign in</button>
+    </form>
+  </dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
