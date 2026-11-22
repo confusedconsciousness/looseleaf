@@ -57,12 +57,19 @@ Changing `PASSWORD` signs every device out. Ten wrong passwords lock sign-in for
 
 ## How sync works
 
+Looseleaf is local-first: drawing and switching sessions never wait for the network.
+
 - Each session is one database row holding its Excalidraw elements and images.
-- A device saves at most every 0.4 s while you draw. The server merges the save element by
-  element: the higher `version` of each element wins, the rule Excalidraw's own collaboration
-  uses. Two devices drawing in the same session both keep their work.
+- A device keeps every session it has opened in memory, and remembers which version of each
+  element the server has confirmed. When you pause drawing, it sends only the elements that
+  changed. Switching sessions sends what's left in the background.
+- The server merges what arrives element by element: the higher `version` of each element wins,
+  the rule Excalidraw's own collaboration uses. Two devices drawing in the same session both
+  keep their work.
 - The server then tells every other open device over a server-sent event stream, and they fetch
   and fold in the change. A device that was offline catches up when the stream reconnects.
+- Each device remembers, per session, where you were looking and your tool settings (in
+  localStorage). The first time a device opens a session it zooms out to fit the whole drawing.
 
 ## Known limits
 
@@ -70,4 +77,8 @@ Search the code for `ponytail:` to find each one and its upgrade path.
 
 - The editor loads from a CDN, so the first load needs the internet, and there is no offline mode.
 - One password and one owner: no user accounts, no sharing, no live cursors.
-- Excalidraw's shape library and per-device view (zoom, scroll position) are not synced.
+- Excalidraw's shape library, the view (zoom, scroll position) and tool settings are kept per
+  device, not synced.
+- Unsent edits are held in memory: they survive a dropped connection, but not closing the tab
+  while offline (the browser warns first).
+- The editor is a pinned canary build of Excalidraw, not a stable release.

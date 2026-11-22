@@ -2,3 +2,4 @@ looseleaf.db*
 node_modules/
 .neon
 .env.local
+.DS_Store

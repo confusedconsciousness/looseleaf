@@ -7,12 +7,17 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cstyle%3E.o,.h{stroke:%231c1c19}@media (prefers-color-scheme:dark){.o{stroke:%23f4f3ee}.h{stroke:%23ffe11a}}%3C/style%3E%3Cpath d='M25.3 34.7Q31.9 29 37.6 22.4M24.9 45.1Q35.6 33.1 47.6 22.4M25 55Q40.9 38.7 57.3 22.7M24.3 65.7Q46.3 44 68 22M27.1 72.9Q48.6 50.6 71 29M36.4 73.6Q53 55.4 71.2 38.8M46 74Q57.9 60.7 71.2 48.8M56.7 73.3Q64.6 65.9 72 58' class='h' fill='none' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M20.5 20Q48.4 19.9 76.3 20M74 18.5Q74 47.8 74 77.2M76.1 76Q47.7 76.5 19.4 76M22 77.5Q22.3 47.6 22 17.6' class='o' fill='none' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M22.7 19.9Q49.6 22.1 76.6 22.1M74.1 17.3Q72 47.4 71.9 77.5M76.2 73.9Q47.9 75.6 19.5 76.1M19.9 77.7Q20.8 48.2 22 18.7' class='o' fill='none' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
 
 <!-- ponytail: the editor is the open-source Excalidraw package (MIT), loaded from esm.sh so
-     there is no build step. It needs the network on first load; to work offline or pin the
-     supply chain, `npm i @excalidraw/excalidraw react react-dom` and bundle with Vite. -->
+     there is no build step (`?bundle` makes it one file instead of about 190). It needs the
+     network on first load; to work offline or pin the supply chain,
+     `npm i @excalidraw/excalidraw react react-dom` and bundle with Vite.
+     ponytail: pinned to a canary build (0.18.0-9fbeaed), the code excalidraw.com itself runs,
+     because the last stable release (0.18) lacks its arrow binding and snap points, and misreads
+     drawings saved from excalidraw.com. Canaries change their API between builds (app.js uses
+     onExcalidrawAPI, onInitialize, setViewport), so move to 0.19 once it's released and retest. -->
 <!-- The wordmark's font, subset to the letters of "looseleaf" so it's a few KB. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&text=looseleaf&display=swap">
-<link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/index.css">
-<script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/';</script>
+<link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0-9fbeaed/dist/prod/index.css">
+<script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.0-9fbeaed/dist/prod/';</script>
 <script type="importmap">
 {
   "imports": {
@@ -20,7 +25,7 @@
     "react/": "https://esm.sh/react@19.0.0/",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/": "https://esm.sh/react-dom@19.0.0/",
-    "@excalidraw/excalidraw": "https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/prod/index.js?external=react,react-dom"
+    "@excalidraw/excalidraw": "https://esm.sh/@excalidraw/excalidraw@0.18.0-9fbeaed/dist/prod/index.js?bundle&external=react,react-dom"
   }
 }
 </script>
@@ -156,6 +161,7 @@
     --color-surface-primary-container: #ffe11a; --color-on-primary-container: #1c1c19;
     --color-surface-high: #f0efe9; --color-surface-mid: #f5f4ef; --color-surface-low: #eceae2;
     --focus-highlight-color: #ffe11a; --link-color: #6b5a00;
+    --color-selection: #b08400; --minimap-viewport-color: #b08400;
   }
   .excalidraw.theme--dark {
     --color-primary: #ffe11a; --color-primary-darker: #ffe74d; --color-primary-darkest: #ffed80;
@@ -166,6 +172,7 @@
     --island-bg-color: #262622; --popup-secondary-bg-color: #20201c;
     --input-bg-color: #161614; --input-border-color: #33332e; --input-hover-bg-color: #20201c;
     --focus-highlight-color: #ffe11a; --link-color: #ffe74d;
+    --color-selection: #ffe11a; --minimap-viewport-color: #ffe11a;
   }
 </style>
 </head>
