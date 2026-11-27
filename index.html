@@ -31,21 +31,50 @@
 </script>
 
 <style>
-  /* Looseleaf's look: flat, dense, warm near-black (dark) or off-white (light), and one bright
-     yellow accent used sparingly: the open session, the selected tool, the main button. */
-  :root {
+  /* Looseleaf's look: flat, dense, one bright accent used sparingly (the open session, the
+     selected tool, the main button). A theme is one block of tokens below; everything else,
+     the editor's chrome included, is drawn from them. Selectors are [data-theme] rather than
+     :root so the swatches in the theme picker can wear their own theme.
+     --sel: the selection colour on the canvas, as r,g,b (app.js reads it).
+     --canvas: the drawing area's colour. In a dark theme Excalidraw passes it through its dark
+     filter (invert 93%, hue-rotate 180), so it holds the light colour that comes out as the
+     wanted dark one. */
+  :root, [data-theme="paper"] {
     --bg: #fafaf7; --panel: #ffffff; --line: #e4e2da; --ink: #1c1c19; --mute: #77756c;
     --hover: #f0efe9; --on: #e8e6dd; --accent: #ffe11a; --accent-ink: #1c1c19;
-    --ok: #2f8f46; --danger: #b3261e; --tile: #1c1c19;
+    --ok: #2f8f46; --danger: #b3261e; --sel: 176,132,0; --canvas: #ffffff;
+    --hatch: var(--ink); --num-on: var(--mute); color-scheme: light;
     --brand: Fraunces, Georgia, serif;
     --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-    color-scheme: light;
   }
-  :root[data-theme="dark"] {
+  [data-theme="mist"] {
+    --bg: #f3f6fa; --panel: #ffffff; --line: #dbe2eb; --ink: #17202c; --mute: #687586;
+    --hover: #e9eef5; --on: #dfe6f0; --accent: #2f6fd0; --accent-ink: #ffffff;
+    --sel: 47,111,208; --canvas: #f8fafc;
+  }
+  [data-theme="sepia"] {
+    --bg: #f5efe3; --panel: #fbf8f1; --line: #e5dac6; --ink: #2c2419; --mute: #7f7260;
+    --hover: #eee6d6; --on: #e7dcc8; --accent: #b84a33; --accent-ink: #ffffff;
+    --sel: 184,74,51; --canvas: #fbf6ec;
+  }
+  [data-theme="graphite"], [data-theme="midnight"], [data-theme="ember"] {
+    --ok: #5cba72; --danger: #ff8f7a; --hatch: var(--accent); --num-on: var(--accent); color-scheme: dark;
+  }
+  [data-theme="graphite"] {
     --bg: #1c1c19; --panel: #262622; --line: #33332e; --ink: #f4f3ee; --mute: #96948a;
-    --hover: #262622; --on: #30302b; --ok: #5cba72; --danger: #ff8f7a; --tile: #30302b;
-    color-scheme: dark;
+    --hover: #262622; --on: #30302b; --accent: #ffe11a; --accent-ink: #1c1c19;
+    --sel: 255,225,26; --canvas: #ffffff;
+  }
+  [data-theme="midnight"] {
+    --bg: #181e29; --panel: #1f2735; --line: #2b3546; --ink: #e6ecf5; --mute: #8794aa;
+    --hover: #1f2735; --on: #263042; --accent: #6cc7f0; --accent-ink: #0b1220;
+    --sel: 108,199,240; --canvas: #ebf2ff;
+  }
+  [data-theme="ember"] {
+    --bg: #1f1a17; --panel: #29221e; --line: #382e28; --ink: #f3ece6; --mute: #a0938a;
+    --hover: #29221e; --on: #332a24; --accent: #ff8a5c; --accent-ink: #1f1a17;
+    --sel: 255,138,92; --canvas: #f9f3f0;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -66,8 +95,7 @@
   .mark { width: 22px; height: 22px; flex: none; position: relative; }
   .mark::before, .mark::after { content: ""; position: absolute; inset: 0; }
   .mark::before { background: var(--ink); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M20.5 20Q48.4 19.9 76.3 20M74 18.5Q74 47.8 74 77.2M76.1 76Q47.7 76.5 19.4 76M22 77.5Q22.3 47.6 22 17.6' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M22.7 19.9Q49.6 22.1 76.6 22.1M74.1 17.3Q72 47.4 71.9 77.5M76.2 73.9Q47.9 75.6 19.5 76.1M19.9 77.7Q20.8 48.2 22 18.7' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M20.5 20Q48.4 19.9 76.3 20M74 18.5Q74 47.8 74 77.2M76.1 76Q47.7 76.5 19.4 76M22 77.5Q22.3 47.6 22 17.6' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M22.7 19.9Q49.6 22.1 76.6 22.1M74.1 17.3Q72 47.4 71.9 77.5M76.2 73.9Q47.9 75.6 19.5 76.1M19.9 77.7Q20.8 48.2 22 18.7' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
-  .mark::after { background: var(--accent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M25.3 34.7Q31.9 29 37.6 22.4M24.9 45.1Q35.6 33.1 47.6 22.4M25 55Q40.9 38.7 57.3 22.7M24.3 65.7Q46.3 44 68 22M27.1 72.9Q48.6 50.6 71 29M36.4 73.6Q53 55.4 71.2 38.8M46 74Q57.9 60.7 71.2 48.8M56.7 73.3Q64.6 65.9 72 58' fill='none' stroke='%23000' stroke-width='4.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M25.3 34.7Q31.9 29 37.6 22.4M24.9 45.1Q35.6 33.1 47.6 22.4M25 55Q40.9 38.7 57.3 22.7M24.3 65.7Q46.3 44 68 22M27.1 72.9Q48.6 50.6 71 29M36.4 73.6Q53 55.4 71.2 38.8M46 74Q57.9 60.7 71.2 48.8M56.7 73.3Q64.6 65.9 72 58' fill='none' stroke='%23000' stroke-width='4.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
-  :root:not([data-theme="dark"]) .mark::after { background: var(--ink); }
+  .mark::after { background: var(--hatch); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M25.3 34.7Q31.9 29 37.6 22.4M24.9 45.1Q35.6 33.1 47.6 22.4M25 55Q40.9 38.7 57.3 22.7M24.3 65.7Q46.3 44 68 22M27.1 72.9Q48.6 50.6 71 29M36.4 73.6Q53 55.4 71.2 38.8M46 74Q57.9 60.7 71.2 48.8M56.7 73.3Q64.6 65.9 72 58' fill='none' stroke='%23000' stroke-width='4.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='14 12 68 72'%3E%3Cpath d='M25.3 34.7Q31.9 29 37.6 22.4M24.9 45.1Q35.6 33.1 47.6 22.4M25 55Q40.9 38.7 57.3 22.7M24.3 65.7Q46.3 44 68 22M27.1 72.9Q48.6 50.6 71 29M36.4 73.6Q53 55.4 71.2 38.8M46 74Q57.9 60.7 71.2 48.8M56.7 73.3Q64.6 65.9 72 58' fill='none' stroke='%23000' stroke-width='4.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
   .brand { font: 600 18px/1 var(--brand); letter-spacing: -.01em; flex: 1; white-space: nowrap; }
   .icon { width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center; color: var(--mute); flex: none; }
   .icon:hover { background: var(--hover); color: var(--ink); }
@@ -77,8 +105,7 @@
     margin: 2px 12px 14px; height: 32px; border-radius: 4px; border: 1px solid var(--line);
     background: var(--panel); text-align: left; padding: 0 10px; flex: none;
   }
-  #new b { font: 500 14px var(--mono); color: var(--accent); margin-right: 7px; }
-  :root:not([data-theme="dark"]) #new b { color: var(--ink); }
+  #new b { font: 500 14px var(--mono); color: var(--hatch); margin-right: 7px; }
   #new:hover { border-color: var(--accent); }
 
   .label { font: 10.5px var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--mute); }
@@ -102,7 +129,7 @@
     text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   #list li.on .name { font-weight: 600; }
-  :root[data-theme="dark"] #list li.on::before { color: var(--accent); }
+  #list li.on::before { color: var(--num-on); }
   #list input.name {
     font: inherit; font-weight: 600; color: var(--ink); background: var(--panel);
     height: 26px; border: 1px solid var(--accent); outline: 0;
@@ -168,27 +195,56 @@
   @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
 
   /* The editor's own chrome, recoloured through Excalidraw's theme variables so its accent is
-     Looseleaf's yellow instead of Excalidraw's purple. The selected tool is solid yellow. */
-  .excalidraw {
-    --color-primary: #1c1c19; --color-primary-darker: #11110f; --color-primary-darkest: #000;
-    --color-primary-hover: #3a3a34; --color-primary-light: #fff3a3; --color-primary-light-darker: #ffe95c;
-    --color-brand-hover: #3a3a34; --color-brand-active: #000; --color-logo-text: #1c1c19;
-    --color-surface-primary-container: #ffe11a; --color-on-primary-container: #1c1c19;
-    --color-surface-high: #f0efe9; --color-surface-mid: #f5f4ef; --color-surface-low: #eceae2;
-    --focus-highlight-color: #ffe11a; --link-color: #6b5a00;
-    --color-selection: #b08400; --minimap-viewport-color: #b08400;
+     the theme's instead of Excalidraw's purple. The selected tool is filled with the accent.
+     The first block names .theme--dark too, to outrank Excalidraw's own dark values. */
+  .excalidraw, .excalidraw.theme--dark {
+    --color-primary: var(--ink); --color-primary-darker: var(--ink); --color-primary-darkest: var(--ink);
+    --color-primary-hover: color-mix(in srgb, var(--ink) 80%, var(--bg));
+    --color-primary-light: color-mix(in srgb, var(--accent) 35%, #fff);
+    --color-primary-light-darker: color-mix(in srgb, var(--accent) 60%, #fff);
+    --color-brand-hover: var(--color-primary-hover); --color-brand-active: var(--ink); --color-logo-text: var(--ink);
+    --color-surface-primary-container: var(--accent); --color-on-primary-container: var(--accent-ink);
+    --color-surface-high: var(--hover); --color-surface-mid: color-mix(in srgb, var(--hover) 50%, var(--bg));
+    --color-surface-low: var(--on); --island-bg-color: var(--panel);
+    --focus-highlight-color: var(--accent); --link-color: color-mix(in srgb, rgb(var(--sel)) 70%, #000);
+    --color-selection: rgb(var(--sel)); --minimap-viewport-color: rgb(var(--sel));
   }
   .excalidraw.theme--dark {
-    --color-primary: #ffe11a; --color-primary-darker: #ffe74d; --color-primary-darkest: #ffed80;
-    --color-primary-hover: #ffe74d; --color-primary-light: #57500f; --color-primary-light-darker: #453f0c;
-    --color-brand-hover: #ffe74d; --color-brand-active: #ffed80; --color-logo-text: #f4f3ee;
-    --color-surface-primary-container: #ffe11a; --color-on-primary-container: #1c1c19;
-    --color-surface-high: #33332e; --color-surface-mid: #1c1c19; --color-surface-low: #262622; --color-surface-lowest: #161614;
-    --island-bg-color: #262622; --popup-secondary-bg-color: #20201c;
-    --input-bg-color: #161614; --input-border-color: #33332e; --input-hover-bg-color: #20201c;
-    --focus-highlight-color: #ffe11a; --link-color: #ffe74d;
-    --color-selection: #ffe11a; --minimap-viewport-color: #ffe11a;
+    --color-primary: var(--accent); --color-primary-darker: color-mix(in srgb, var(--accent) 80%, #fff);
+    --color-primary-darkest: color-mix(in srgb, var(--accent) 60%, #fff);
+    --color-primary-hover: var(--color-primary-darker);
+    --color-primary-light: color-mix(in srgb, var(--accent) 30%, var(--bg));
+    --color-primary-light-darker: color-mix(in srgb, var(--accent) 22%, var(--bg));
+    --color-brand-hover: var(--color-primary-darker); --color-brand-active: var(--color-primary-darkest);
+    --color-surface-high: var(--line); --color-surface-mid: var(--bg); --color-surface-low: var(--panel);
+    --color-surface-lowest: color-mix(in srgb, var(--bg) 80%, #000);
+    --popup-secondary-bg-color: color-mix(in srgb, var(--bg) 60%, var(--panel));
+    --input-bg-color: var(--color-surface-lowest); --input-border-color: var(--line);
+    --input-hover-bg-color: var(--popup-secondary-bg-color);
+    --link-color: var(--color-primary-darker);
   }
+
+  /* The theme picker: each swatch carries its own data-theme, so it previews itself. */
+  #themes {
+    width: min(420px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); box-shadow: 0 12px 40px #0006;
+  }
+  #themes::backdrop { background: #0004; }
+  #themes .label { margin: 14px 0 8px; }
+  #themes .label:first-child { margin-top: 0; }
+  #themes .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  #themes button {
+    display: grid; gap: 2px; padding: 10px; border-radius: 6px; text-align: left;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+  #themes button::before {
+    content: ""; height: 28px; margin-bottom: 6px; border-radius: 3px; border: 1px solid var(--line);
+    background: linear-gradient(90deg, var(--panel) 0 30%, transparent 30%), linear-gradient(var(--accent) 0 0) 38% 50% / 22% 4px no-repeat;
+  }
+  #themes button b { font-weight: 600; }
+  #themes button small { font-size: 11px; color: var(--mute); }
+  #themes button:hover { border-color: var(--accent); }
+  #themes button[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
 </style>
 </head>
 <body>
@@ -204,6 +260,9 @@
     <ul id="list"></ul>
     <footer>
       <div id="status" role="status">Synced</div>
+      <button class="icon" popovertarget="themes" aria-label="Theme" title="Theme">
+        <svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 0 12c1 0 1.3-.8.9-1.5-.5-.9 0-1.9 1.1-1.9H12a2 2 0 0 0 2-2C14 4.6 11.3 2 8 2z"/><circle cx="5" cy="7" r=".6"/><circle cx="7.5" cy="4.8" r=".6"/><circle cx="10.5" cy="5.6" r=".6"/></svg>
+      </button>
       <button id="out" hidden>Sign out</button>
     </footer>
   </aside>
@@ -212,6 +271,20 @@
     <svg viewBox="0 0 24 24"><path d="M7 18.5h10.5a3.5 3.5 0 0 0 .7-6.93A6 6 0 0 0 6.8 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M3.5 3.5l17 17"/></svg>
   </button>
   <div id="alarm-msg" popover role="status"></div>
+  <div id="themes" popover aria-label="Theme">
+    <div class="label">Dark</div>
+    <div class="row">
+      <button data-theme="graphite" data-pair="paper"><b>Graphite</b><small>Ink and yellow</small></button>
+      <button data-theme="midnight" data-pair="mist"><b>Midnight</b><small>Late-night focus</small></button>
+      <button data-theme="ember" data-pair="sepia"><b>Ember</b><small>Warm, low glare</small></button>
+    </div>
+    <div class="label">Light</div>
+    <div class="row">
+      <button data-theme="paper" data-pair="graphite"><b>Paper</b><small>Clean and bright</small></button>
+      <button data-theme="mist" data-pair="midnight"><b>Mist</b><small>Cool and calm</small></button>
+      <button data-theme="sepia" data-pair="ember"><b>Sepia</b><small>Easy on the eyes</small></button>
+    </div>
+  </div>
   <dialog id="login" aria-labelledby="login-title">
     <form>
       <h1 id="login-title"><span class="mark"></span>looseleaf</h1>
