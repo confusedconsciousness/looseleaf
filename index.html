@@ -123,12 +123,18 @@
   #out:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
   #canvas { flex: 1; min-width: 0; height: 100%; }
-  /* Shown over the canvas when work has stayed unsent: too important for the footer alone. */
+  /* Top right of the canvas, beside the editor's library button, when nothing has synced for a while. */
+  #alarm, #alarm-msg { position: fixed; z-index: 20; right: 60px; }
   #alarm {
-    position: fixed; z-index: 20; top: 64px; left: 50%; transform: translateX(-50%);
-    max-width: min(560px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 6px;
-    background: var(--accent); color: var(--accent-ink); font-weight: 600; line-height: 1.35;
-    box-shadow: 0 6px 24px #0006;
+    top: 16px; width: 36px; height: 36px; color: var(--danger);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px #0003;
+  }
+  #alarm[hidden] { display: none; } /* .icon's display: grid would otherwise override hidden */
+  #alarm svg { width: 18px; height: 18px; }
+  #alarm-msg {
+    top: 60px; left: auto; bottom: auto; margin: 0; max-width: min(320px, calc(100vw - 76px)); padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink);
+    line-height: 1.4; box-shadow: 0 6px 24px #0004;
   }
 
   #login {
@@ -156,6 +162,8 @@
     /* On a phone the open sidebar floats over the canvas instead of squeezing it. */
     body:not(.shut) #side { position: fixed; inset: 0 auto 0 0; z-index: 10; box-shadow: 0 0 40px #0006; }
     body:not(.shut) #canvas { margin-left: 44px; }
+    #alarm { top: 12px; right: 52px; width: 32px; height: 32px; } /* the editor's phone buttons are smaller */
+    #alarm-msg { top: 52px; right: 12px; }
   }
   @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
 
@@ -200,7 +208,10 @@
     </footer>
   </aside>
   <main id="canvas"></main>
-  <div id="alarm" role="alert" hidden></div>
+  <button id="alarm" class="icon" popovertarget="alarm-msg" aria-label="Not synced" title="Not synced" hidden>
+    <svg viewBox="0 0 24 24"><path d="M7 18.5h10.5a3.5 3.5 0 0 0 .7-6.93A6 6 0 0 0 6.8 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M3.5 3.5l17 17"/></svg>
+  </button>
+  <div id="alarm-msg" popover role="status"></div>
   <dialog id="login" aria-labelledby="login-title">
     <form>
       <h1 id="login-title"><span class="mark"></span>looseleaf</h1>
