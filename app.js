@@ -11,7 +11,7 @@ const narrow = () => innerWidth < 700;
 // A scene's version is the sum of its elements' versions: any edit, delete or undo raises it.
 const version = (els) => els.reduce((n, e) => n + e.version, 0);
 
-let sessions = [];    // [{ id, name, updated }]
+let sessions = [];    // [{ id, name, updated, pos }], in sidebar order
 let cur = null;       // id of the open session
 let api = null;       // Excalidraw's imperative API for the open session
 let theme = 'light';  // the editor's mode, light or dark, which follows the chosen look
@@ -389,10 +389,14 @@ async function open(id) {
 const recovered = recover(); // outboxes from earlier tabs go up before anything is read back
 let firstList = recovered.then(() => call('GET', '/api/sessions')); // started at once, not after the event stream connects
 firstList.catch(() => {});
+let moves = 0; // bumped when a move starts and when it lands, so a list fetched across one is retried
 async function refresh() {
   const first = firstList;
   firstList = null;
-  sessions = await (first ? first.catch(() => call('GET', '/api/sessions')) : call('GET', '/api/sessions'));
+  const turn = moves;
+  const list = await (first ? first.catch(() => call('GET', '/api/sessions')) : call('GET', '/api/sessions'));
+  if (turn !== moves) return refresh(); // it may predate a move made here meanwhile
+  sessions = list;
   if (!sessions.length) sessions = [await call('POST', '/api/sessions', { name: 'My first session' })];
   // A session deleted elsewhere is forgotten here too, unless this device still has unsent work
   // for it: flush() then moves that work to a new session.
@@ -461,10 +465,18 @@ async function addLibrary() {
 const PENCIL = '<svg viewBox="0 0 16 16"><path d="M3 13l.6-2.8L10.9 3l2.1 2.1-7.2 7.3z"/></svg>';
 const CROSS = '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
 
+// The search box filters by name. Sessions keep their number while filtered, and can't be
+// dragged then, since a move among the matches would land somewhere unclear in the full list.
 function draw() {
-  $('list').replaceChildren(...sessions.map((s) => {
+  const words = $('find').value.trim().toLowerCase();
+  const shown = sessions.map((s, i) => [s, i]).filter(([s]) => s.name.toLowerCase().includes(words));
+  const focused = document.activeElement?.matches('#list button') && document.activeElement.closest('li').dataset.id;
+  $('none').hidden = shown.length > 0;
+  $('list').replaceChildren(...shown.map(([s, i]) => {
     const li = document.createElement('li');
     li.dataset.id = s.id;
+    li.dataset.n = String(i + 1).padStart(2, '0');
+    li.draggable = !words;
     if (s.id === cur) li.className = 'on';
     const name = Object.assign(document.createElement('button'), { className: 'name', textContent: s.name });
     const edit = Object.assign(document.createElement('button'), { className: 'icon act', innerHTML: PENCIL, title: 'Rename' });
@@ -474,6 +486,30 @@ function draw() {
     li.append(name, edit, del);
     return li;
   }));
+  if (focused) $('list').querySelector(`[data-id="${focused}"] .name`)?.focus(); // the old row is gone
+}
+
+// Moves a session to index `to`. Only the moved session changes on the server: it gets a `pos`
+// halfway between its new neighbours'.
+// ponytail: halving between the same two neighbours runs out of float precision after about 50
+// moves; renumber every session's pos when two neighbours come out equal.
+async function move(id, to) {
+  const from = sessions.findIndex((s) => s.id === id);
+  if (from < 0 || to < 0 || to >= sessions.length || to === from) return;
+  const [s] = sessions.splice(from, 1);
+  sessions.splice(to, 0, s);
+  const prev = sessions[to - 1], next = sessions[to + 1];
+  s.pos = !prev ? next.pos - 1 : !next ? prev.pos + 1 : (prev.pos + next.pos) / 2;
+  moves++;
+  draw();
+  try {
+    await call('PUT', '/api/sessions/' + id, { pos: s.pos });
+  } catch (e) {
+    await refresh().catch(() => {}); // put the list back the way the server has it
+    throw e;
+  } finally {
+    moves++;
+  }
 }
 
 function rename(s) {
@@ -533,6 +569,53 @@ $('list').onclick = safe((e) => {
 $('list').ondblclick = (e) => {
   const s = sessions.find((x) => x.id === e.target.closest('li')?.dataset.id);
   if (s && e.target.matches('button.name')) rename(s);
+};
+// Drag a session to reorder (the line shows where it will land), or Alt+Up/Down from the keyboard.
+// ponytail: native drag and drop, which phones support unevenly. Add pointer-event dragging if
+// reordering on a phone matters.
+let dragging = null;
+const unmark = () => $('list').querySelectorAll('.above, .below').forEach((li) => li.classList.remove('above', 'below'));
+$('list').ondragstart = (e) => {
+  const li = e.target.closest('li');
+  dragging = li.dataset.id;
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('application/x-looseleaf', dragging); // not text/plain, which the canvas would paste
+};
+$('list').ondragover = (e) => {
+  const li = e.target.closest('li');
+  if (!dragging || !li) return;
+  e.preventDefault();
+  const below = e.clientY > li.getBoundingClientRect().top + li.offsetHeight / 2;
+  if (li.classList.contains(below ? 'below' : 'above')) return;
+  unmark();
+  li.classList.add(below ? 'below' : 'above');
+};
+$('list').ondrop = (e) => {
+  e.preventDefault();
+  const li = $('list').querySelector('.above, .below');
+  if (!dragging || !li) return;
+  let to = sessions.findIndex((s) => s.id === li.dataset.id) + (li.classList.contains('below') ? 1 : 0);
+  if (sessions.findIndex((s) => s.id === dragging) < to) to--;
+  safe(move)(dragging, to);
+};
+$('list').ondragend = () => {
+  dragging = null;
+  unmark();
+  $('list').querySelector('.dragging')?.classList.remove('dragging');
+};
+$('list').onkeydown = (e) => {
+  const id = e.target.closest('li')?.dataset.id;
+  if (!e.altKey || !/^Arrow(Up|Down)$/.test(e.key) || !id || e.target.matches('input') || $('find').value.trim()) return;
+  e.preventDefault();
+  e.stopPropagation(); // the editor would nudge selected shapes
+  safe(move)(id, sessions.findIndex((s) => s.id === id) + (e.key === 'ArrowUp' ? -1 : 1));
+};
+$('find').oninput = draw;
+$('find').onkeydown = (e) => {
+  e.stopPropagation(); // keep the editor's single-key shortcuts out of the search
+  if (e.key === 'Escape') ($('find').value = ''), draw();
+  if (e.key === 'Enter') $('list').querySelector('.name')?.click(); // opens the first match
 };
 $('new').onclick = safe(create);
 $('themes').onclick = (e) => {

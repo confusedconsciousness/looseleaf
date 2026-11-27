@@ -31,10 +31,15 @@ if (process.env.DATABASE_URL) {
 }
 // ponytail: each scene is one JSON text column, images included; move images to their own table
 // (or object storage) when scenes with many images make every save slow.
+// `pos` orders the sidebar (lowest first). A session that was never moved has none and sorts by
+// -created, so new ones come first; moving one gives it a number between its new neighbours.
 const ready = q(`CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY, name TEXT NOT NULL,
   scene TEXT NOT NULL DEFAULT '{"elements":[],"files":{}}',
-  created BIGINT NOT NULL, updated BIGINT NOT NULL)`);
+  created BIGINT NOT NULL, updated BIGINT NOT NULL, pos DOUBLE PRECISION)`)
+  // Tables made before `pos` existed. SQLite has no ADD COLUMN IF NOT EXISTS, so "it's already
+  // there" arrives as an error; any other failure shows up on the first list.
+  .then(() => q('ALTER TABLE sessions ADD COLUMN pos DOUBLE PRECISION').catch(() => {}));
 
 // A save reads, merges, then writes. The database calls are async, so saves run one at a time;
 // otherwise two devices saving at once could each overwrite the other's merge.
@@ -68,6 +73,7 @@ function validate(body) {
   if ('name' in body && (typeof body.name !== 'string' || !body.name.trim() || body.name.length > 80)) return 'name must be 1-80 characters';
   if ('elements' in body && !(Array.isArray(body.elements) && body.elements.every((e) => isObj(e) && typeof e.id === 'string' && Number.isFinite(e.version)))) return 'elements must be Excalidraw elements';
   if ('files' in body && !isObj(body.files)) return 'files must be an object';
+  if ('pos' in body && !Number.isFinite(body.pos)) return 'pos must be a number';
   return null;
 }
 
@@ -164,13 +170,13 @@ async function handle(req, res) {
   const find = async () => (await q('SELECT * FROM sessions WHERE id = $1', [id]))[0];
 
   if (!id && req.method === 'GET') {
-    return send(res, 200, await q('SELECT id, name, updated FROM sessions ORDER BY created DESC'));
+    return send(res, 200, await q('SELECT id, name, updated, COALESCE(pos, -created) AS pos FROM sessions ORDER BY pos, created DESC'));
   }
   if (!id && req.method === 'POST') {
     const body = await readJson(req);
     const bad = validate(body);
     if (bad) return send(res, 400, { error: bad });
-    const made = { id: crypto.randomUUID(), name: (body.name || 'Untitled').trim(), updated: now };
+    const made = { id: crypto.randomUUID(), name: (body.name || 'Untitled').trim(), updated: now, pos: -now };
     await q('INSERT INTO sessions (id, name, created, updated) VALUES ($1, $2, $3, $3)', [made.id, made.name, now]);
     broadcast({ type: 'list', client: body.client });
     return send(res, 201, made);
@@ -193,6 +199,11 @@ async function handle(req, res) {
       const row = await find();
       if (!row) return send(res, 404, { error: 'no such session' });
       let updated = row.updated; // sent back so a device can tell when the server's copy has moved on
+      // Moving a session in the list doesn't touch `updated`: that tells devices the drawing changed.
+      if ('pos' in body && body.pos !== row.pos) {
+        await q('UPDATE sessions SET pos = $1 WHERE id = $2', [body.pos, id]);
+        broadcast({ type: 'list', client: body.client });
+      }
       if (body.name && body.name.trim() !== row.name) {
         await q('UPDATE sessions SET name = $1, updated = $2 WHERE id = $3', [body.name.trim(), now, id]);
         broadcast({ type: 'list', client: body.client });
