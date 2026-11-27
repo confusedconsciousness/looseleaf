@@ -123,17 +123,16 @@
   #out:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
   #canvas { flex: 1; min-width: 0; height: 100%; }
-  /* Over the canvas, under the editor's menu button, when nothing has synced for a while. */
-  #alarm, #alarm-msg { position: fixed; z-index: 20; left: 264px; }
-  body.shut #alarm, body.shut #alarm-msg { left: 60px; }
+  /* Top right of the canvas, beside the editor's library button, when nothing has synced for a while. */
+  #alarm, #alarm-msg { position: fixed; z-index: 20; right: 60px; }
   #alarm {
-    top: 64px; width: 32px; height: 32px; color: var(--danger);
-    background: var(--panel); border: 1px solid var(--line); box-shadow: 0 2px 8px #0003;
+    top: 16px; width: 36px; height: 36px; color: var(--danger);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px #0003;
   }
   #alarm[hidden] { display: none; } /* .icon's display: grid would otherwise override hidden */
   #alarm svg { width: 18px; height: 18px; }
   #alarm-msg {
-    top: 102px; margin: 0; max-width: min(320px, calc(100vw - 76px)); padding: 10px 12px;
+    top: 60px; left: auto; bottom: auto; margin: 0; max-width: min(320px, calc(100vw - 76px)); padding: 10px 12px;
     border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink);
     line-height: 1.4; box-shadow: 0 6px 24px #0004;
   }
@@ -163,7 +162,8 @@
     /* On a phone the open sidebar floats over the canvas instead of squeezing it. */
     body:not(.shut) #side { position: fixed; inset: 0 auto 0 0; z-index: 10; box-shadow: 0 0 40px #0006; }
     body:not(.shut) #canvas { margin-left: 44px; }
-    #alarm, #alarm-msg { left: 60px; }
+    #alarm { top: 12px; right: 52px; width: 32px; height: 32px; } /* the editor's phone buttons are smaller */
+    #alarm-msg { top: 52px; right: 12px; }
   }
   @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
 
