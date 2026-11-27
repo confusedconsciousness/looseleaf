@@ -14,7 +14,8 @@ const version = (els) => els.reduce((n, e) => n + e.version, 0);
 let sessions = [];    // [{ id, name, updated }]
 let cur = null;       // id of the open session
 let api = null;       // Excalidraw's imperative API for the open session
-let theme = 'light';
+let theme = 'light';  // the editor's mode, light or dark, which follows the chosen look
+let look = '';        // the chosen theme: a data-theme in index.html's #themes picker
 let library = [];     // Excalidraw library items, shared by every session on this device
 let pendingLib = '';  // a library URL waiting for the editor to mount
 
@@ -45,14 +46,14 @@ let prefs = {};       // editor settings matching PREFS
 
 // Excalidraw draws selection outlines and arrow handles on its "interactive" canvas in a purple
 // that is hard-coded in its source, with no setting for it. So recolour at the canvas itself: any
-// blue-to-purple colour set on that canvas becomes the theme's accent instead. Your drawing is
+// blue-to-purple colour set on that canvas becomes the theme's selection colour instead. Your drawing is
 // painted on a different canvas, so purple shapes you draw are untouched.
 // ponytail: this patches CanvasRenderingContext2D for the whole page. Remove it once Excalidraw
 // exposes these colours as theme variables.
-const ACCENT = { dark: '255,225,26', light: '176,132,0' }; // yellow on ink; amber on white, where yellow is invisible
+let sel = '';         // the theme's selection colour as r,g,b, from its --sel token
 const tints = new Map();
 function retint(c) {
-  const key = theme + c;
+  const key = look + c;
   if (tints.has(key)) return tints.get(key);
   let m, r, g, b, a = 1, out = c;
   if ((m = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(c))) {
@@ -64,7 +65,7 @@ function retint(c) {
   const spread = Math.max(r, g, b) - Math.min(r, g, b);
   if (spread >= 40 && b === Math.max(r, g, b)) { // not a grey, and blue is its strongest channel
     const hue = 240 + (60 * (r - g)) / spread;
-    if (hue >= 205 && hue <= 285) out = `rgba(${ACCENT[theme]},${a})`;
+    if (hue >= 205 && hue <= 285) out = `rgba(${sel},${a})`;
   }
   tints.set(key, out);
   return out;
@@ -287,7 +288,7 @@ async function pull() {
 // Runs on every editor update, including pointer moves, so it only compares two numbers and makes
 // sure a check is scheduled. The check itself works out what is unsent from scratch.
 function onChange(elements, appState, files) {
-  if (appState.theme !== theme) setTheme(appState.theme);
+  if (appState.theme !== theme) setLook($('themes').querySelector(`[data-theme="${look}"]`).dataset.pair); // the editor's own light/dark shortcut
   const v = version(elements);
   const n = Object.keys(files).length;
   if (v !== seen || n !== nfiles) {
@@ -318,13 +319,18 @@ const check = safe(async () => {
 
 /* ---------- sessions ---------- */
 
-// Excalidraw's default menu minus its "Excalidraw links" group (their GitHub, X and Discord).
+// The same palette as the sidebar's theme button, for the editor's menu.
+const PALETTE = h('svg', { viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.25, strokeLinecap: 'round' },
+  h('path', { d: 'M8 2a6 6 0 1 0 0 12c1 0 1.3-.8.9-1.5-.5-.9 0-1.9 1.1-1.9H12a2 2 0 0 0 2-2C14 4.6 11.3 2 8 2z' }),
+  ...[[5, 7], [7.5, 4.8], [10.5, 5.6]].map(([cx, cy]) => h('circle', { cx, cy, r: 0.6, key: cx })));
+// Excalidraw's default menu minus its "Excalidraw links" group (their GitHub, X and Discord), with
+// Looseleaf's theme picker in place of its light/dark toggle and canvas colour (the theme sets both).
 const MENU = h(MainMenu, null,
   ...['LoadScene', 'SaveToActiveFile', 'Export', 'SaveAsImage', 'SearchMenu', 'Help', 'ClearCanvas']
     .map((k) => h(MainMenu.DefaultItems[k], { key: k })),
   h(MainMenu.Separator, { key: 'sep' }),
-  ...['Preferences', 'ToggleTheme', 'ChangeCanvasBackground']
-    .filter((k) => MainMenu.DefaultItems[k]).map((k) => h(MainMenu.DefaultItems[k], { key: k })));
+  ...['Preferences'].filter((k) => MainMenu.DefaultItems[k]).map((k) => h(MainMenu.DefaultItems[k], { key: k })),
+  h(MainMenu.Item, { key: 'theme', onSelect: () => $('themes').showPopover(), icon: PALETTE }, 'Theme…'));
 
 // Switching never waits for a save: the session being left keeps its unsent work in `docs` and
 // goes up in the background. A session seen before shows at once from memory, then catches up.
@@ -373,7 +379,7 @@ async function open(id) {
       library = items;
       store('library', JSON.stringify(items));
     },
-    initialData: { elements, files: d.files, libraryItems: library, appState: { objectsSnapModeEnabled: true, ...prefs, theme, ...views[id] } },
+    initialData: { elements, files: d.files, libraryItems: library, appState: { objectsSnapModeEnabled: true, ...prefs, theme, viewBackgroundColor: canvasColor(), ...views[id] } },
   }, MENU));
   if (narrow()) document.body.classList.add('shut');
   draw();
@@ -502,10 +508,18 @@ function store(k, v) {
   try { return v === undefined ? localStorage.getItem(k) : localStorage.setItem(k, v); } catch { return null; }
 }
 
-function setTheme(t) {
-  theme = t;
-  document.documentElement.dataset.theme = t;
-  store('theme', t);
+// A theme is a block of CSS tokens; the editor learns its mode and canvas colour from them.
+const canvasColor = () => getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
+function setLook(id) {
+  const btn = $('themes').querySelector(`[data-theme="${id}"]`) || $('themes').querySelector('[data-theme="graphite"]');
+  look = btn.dataset.theme;
+  document.documentElement.dataset.theme = look;
+  const css = getComputedStyle(document.documentElement);
+  theme = css.colorScheme === 'dark' ? 'dark' : 'light';
+  sel = css.getPropertyValue('--sel').trim();
+  for (const b of $('themes').querySelectorAll('button')) b.ariaPressed = String(b === btn);
+  store('theme', look);
+  api?.updateScene({ appState: { theme, viewBackgroundColor: canvasColor() }, captureUpdate: CaptureUpdateAction.NEVER });
 }
 
 /* ---------- events ---------- */
@@ -521,6 +535,10 @@ $('list').ondblclick = (e) => {
   if (s && e.target.matches('button.name')) rename(s);
 };
 $('new').onclick = safe(create);
+$('themes').onclick = (e) => {
+  const b = e.target.closest('button');
+  if (b) setLook(b.dataset.theme);
+};
 $('toggle').onclick = () => document.body.classList.toggle('shut');
 addEventListener('hashchange', safe(() => {
   if (takeLibrary()) return;
@@ -558,7 +576,7 @@ const land = location.hash.slice(1) || store('last');
 if (/^[\w-]+$/.test(land || '')) recovered.then(() => load(land)).catch(() => {});
 try { library = JSON.parse(store('library')) || []; } catch {}
 takeLibrary();
-setTheme(store('theme') || 'dark'); // ink is the house look; the editor's menu switches to paper
+setLook({ dark: 'graphite', light: 'paper' }[store('theme')] || store('theme') || 'graphite'); // older versions stored the mode
 if (narrow()) document.body.classList.add('shut');
 
 /* ---------- sign-in ---------- */

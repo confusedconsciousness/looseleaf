@@ -7,6 +7,11 @@ phone and tablet; edits appear on the others within about half a second).
 The drawing surface is the open-source [Excalidraw](https://github.com/excalidraw/excalidraw)
 editor (MIT), so every drawing tool, shortcut, export and theme it has works here.
 
+Pick a theme from the palette button at the foot of the sidebar or from the editor's menu: Graphite,
+Midnight or Ember (dark), Paper, Mist or Sepia (light). Each is remembered per device, and the
+editor's light/dark shortcut (Alt+Shift+D) swaps between paired themes. A theme is one block of
+colour tokens in `index.html`; to add one, add a block and a button in the `#themes` picker.
+
 ## Run on this computer
 
 ```bash
