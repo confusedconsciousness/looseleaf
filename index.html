@@ -130,6 +130,7 @@
     top: 64px; width: 32px; height: 32px; color: var(--danger);
     background: var(--panel); border: 1px solid var(--line); box-shadow: 0 2px 8px #0003;
   }
+  #alarm[hidden] { display: none; } /* .icon's display: grid would otherwise override hidden */
   #alarm svg { width: 18px; height: 18px; }
   #alarm-msg {
     top: 102px; margin: 0; max-width: min(320px, calc(100vw - 76px)); padding: 10px 12px;
