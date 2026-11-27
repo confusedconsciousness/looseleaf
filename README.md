@@ -77,7 +77,8 @@ that has not reached the server yet is never held in memory alone.
   silently, each device also checks on its own: when the tab comes to the front, when the network
   returns, and once a minute, it retries unsent work, reloads the list, and fetches the open
   session if the server's copy has moved on.
-- If work stays unsent for more than about 15 seconds, a banner over the canvas says so.
+- If nothing has reached the server for over a minute while work is waiting, a banner over the
+  canvas says so.
 - Unsent work for a session that was deleted on another device goes into a new session named
   "Recovered …" instead of being dropped.
 - Each device remembers, per session, where you were looking and your tool settings (in

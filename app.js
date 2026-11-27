@@ -84,14 +84,14 @@ function status(s) {
   $('status').dataset.s = s;
   $('status').textContent = STATUS[s];
 }
-// The footer says where saving stands; if work stays unsent for more than a few seconds, a banner
-// over the canvas says so too, because a small footer is easy to miss for hours.
+// The footer says where saving stands; if work stays unsent for over a minute, a banner over the
+// canvas says so too, because a small footer is easy to miss for hours.
 function show() {
   const left = pending();
   unsyncedSince = left ? unsyncedSince || Date.now() : 0;
   status(!left ? 'synced' : failing ? 'offline' : 'saving');
   const mins = Math.floor((Date.now() - unsyncedSince) / 60000);
-  $('alarm').hidden = !left || Date.now() - unsyncedSince < 15000;
+  $('alarm').hidden = !left || Date.now() - unsyncedSince < 60000;
   $('alarm').textContent = (mins ? `Not synced for ${mins} min. ` : 'Not synced yet. ') + (unstored
     ? 'These changes exist only in this tab: keep it open until this message goes away.'
     : 'Your changes are stored on this device and will sync when the server is reachable. They are not on your other devices yet.');
@@ -207,6 +207,7 @@ async function flush() {
   if (sending) return !(again = true);
   sending = true;
   failing = false;
+  const from = Date.now(); // everything drawn before this is in the snapshot below
   try {
     snapshot(); // also how a pan or zoom with no edit gets remembered
     stash();
@@ -227,6 +228,9 @@ async function flush() {
     }
     snapshot(); // anything drawn while those were in flight is still unsent
     stash();
+    // All of that reached the server, so whatever is still unsent was drawn after `from`. Without
+    // this, steady drawing always leaves something unsent and the banner fires while saves work.
+    if (!failing) unsyncedSince = from;
   } finally {
     sending = false; // whatever happened above, the next flush must be able to run
   }
