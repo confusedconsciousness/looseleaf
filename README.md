@@ -7,6 +7,10 @@ phone and tablet; edits appear on the others within about half a second).
 The drawing surface is the open-source [Excalidraw](https://github.com/excalidraw/excalidraw)
 editor (MIT), so every drawing tool, shortcut, export and theme it has works here.
 
+Drag sessions in the sidebar to reorder them (or focus one and press Alt+↑/↓); the order is kept
+on the server, so every device shows the same list. The search box above the list filters sessions
+by name; Enter opens the first match, Esc clears it.
+
 Pick a theme from the palette button at the foot of the sidebar or from the editor's menu: Graphite,
 Midnight or Ember (dark), Paper, Mist or Sepia (light). Each is remembered per device, and the
 editor's light/dark shortcut (Alt+Shift+D) swaps between paired themes. A theme is one block of

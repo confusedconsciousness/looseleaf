@@ -54,6 +54,12 @@ test('sign-in guards the API, and two devices saving the same session both keep 
     assert.deepEqual([got.name, Object.keys(got.files)], ['Design v2', ['f1']]);
     assert.equal((await json('GET', base)).find((x) => x.id === s.id).updated, put.updated); // list, scene and save agree
     assert.equal(got.updated, put.updated);
+    // Order: newest first until moved; a move only changes `pos`, never `updated`.
+    const s2 = await json('POST', base, { name: 'Later' });
+    assert.deepEqual((await json('GET', base)).map((x) => x.name), ['Later', 'Design v2']);
+    assert.deepEqual(await json('PUT', base + '/' + s2.id, { pos: 1e15 }), { ok: true, updated: s2.updated });
+    assert.deepEqual((await json('GET', base)).map((x) => x.name), ['Design v2', 'Later']);
+    assert.equal((await req('PUT', base + '/' + s2.id, { pos: 'top' })).status, 400);
     assert.equal((await req('POST', base, {}, {})).status, 400); // no JSON content-type
     assert.equal((await req('DELETE', base + '/' + s.id)).status, 200);
     assert.equal((await req('GET', base + '/' + s.id)).status, 404);

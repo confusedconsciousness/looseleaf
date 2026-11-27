@@ -102,26 +102,39 @@
   .icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 
   #new {
-    margin: 2px 12px 14px; height: 32px; border-radius: 4px; border: 1px solid var(--line);
+    margin: 2px 12px 8px; height: 32px; border-radius: 4px; border: 1px solid var(--line);
     background: var(--panel); text-align: left; padding: 0 10px; flex: none;
   }
   #new b { font: 500 14px var(--mono); color: var(--hatch); margin-right: 7px; }
   #new:hover { border-color: var(--accent); }
 
+  #find {
+    margin: 0 12px 14px; height: 30px; padding: 0 10px; flex: none; border-radius: 4px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit;
+  }
+  #find::placeholder { color: var(--mute); }
+  #find:focus { outline: 0; border-color: var(--accent); }
+  #none { margin: 0; padding: 4px 16px; flex: 1; color: var(--mute); }
+
   .label { font: 10.5px var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--mute); }
   #side .label { padding: 0 16px 8px; }
 
-  /* Sessions are numbered by a CSS counter; the open one gets a yellow bar. */
-  #list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; counter-reset: sheet; }
+  /* Sessions show their place in the list (data-n); the open one gets an accent bar. While one is
+     dragged, a line on the row under the pointer shows where it will land. */
+  #list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; }
+  #list:has(+ #none:not([hidden])) { flex: none; }
+  #list li.dragging { opacity: .45; }
+  #list li.above { box-shadow: inset 0 2px var(--accent); }
+  #list li.below { box-shadow: inset 0 -2px var(--accent); }
   #list li {
     display: flex; align-items: center; height: 34px; margin-bottom: 2px; padding-right: 4px;
-    border-radius: 4px; position: relative; counter-increment: sheet;
+    border-radius: 4px; position: relative;
   }
   #list li:hover { background: var(--hover); }
   #list li.on { background: var(--on); }
   #list li.on::after { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 2px; background: var(--accent); }
   #list li::before {
-    content: counter(sheet, decimal-leading-zero); width: 30px; padding-right: 6px; flex: none;
+    content: attr(data-n); width: 30px; padding-right: 6px; flex: none;
     text-align: right; font: 10.5px var(--mono); color: var(--mute);
   }
   #list .name {
@@ -183,7 +196,7 @@
   /* Collapsed: a slim rail that keeps only the toggle. */
   body.shut #side { width: 44px; }
   body.shut #side header { padding: 0 8px; }
-  body.shut #side .mark, body.shut .brand, body.shut #new, body.shut #side .label, body.shut #list, body.shut #side footer { display: none; }
+  body.shut #side .mark, body.shut .brand, body.shut #new, body.shut #find, body.shut #none, body.shut #side .label, body.shut #list, body.shut #side footer { display: none; }
 
   @media (max-width: 700px) {
     /* On a phone the open sidebar floats over the canvas instead of squeezing it. */
@@ -256,8 +269,10 @@
       </button>
     </header>
     <button id="new"><b>+</b>New session</button>
+    <input id="find" type="search" placeholder="Search sessions" aria-label="Search sessions" autocomplete="off" spellcheck="false">
     <div class="label">Sessions</div>
     <ul id="list"></ul>
+    <p id="none" hidden>No sessions match.</p>
     <footer>
       <div id="status" role="status">Synced</div>
       <button class="icon" popovertarget="themes" aria-label="Theme" title="Theme">
