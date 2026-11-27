@@ -192,9 +192,11 @@ async function handle(req, res) {
     return serial(async () => {
       const row = await find();
       if (!row) return send(res, 404, { error: 'no such session' });
+      let updated = row.updated; // sent back so a device can tell when the server's copy has moved on
       if (body.name && body.name.trim() !== row.name) {
         await q('UPDATE sessions SET name = $1, updated = $2 WHERE id = $3', [body.name.trim(), now, id]);
         broadcast({ type: 'list', client: body.client });
+        updated = now;
       }
       const scene = JSON.parse(row.scene);
       const elements = body.elements && merge(scene.elements, body.elements);
@@ -204,8 +206,9 @@ async function handle(req, res) {
         await q('UPDATE sessions SET scene = $1, updated = $2 WHERE id = $3',
           [JSON.stringify({ elements: elements || scene.elements, files: scene.files }), now, id]);
         broadcast({ type: 'scene', id, client: body.client });
+        updated = now;
       }
-      send(res, 200, { ok: true });
+      send(res, 200, { ok: true, updated });
     });
   }
   send(res, 405, { error: 'method not allowed' });
@@ -218,6 +221,12 @@ const server = http.createServer((req, res) => {
 if (require.main === module) {
   if (!['127.0.0.1', 'localhost', '::1'].includes(HOST) && PASSWORD.length < 12) {
     console.error('Refusing to listen on ' + HOST + ' without a password of at least 12 characters. Set PASSWORD=...');
+    process.exit(1);
+  }
+  // Hosts wipe their disk on every restart, so the SQLite fallback there would lose every
+  // drawing without a word. Better not to start at all.
+  if (!['127.0.0.1', 'localhost', '::1'].includes(HOST) && !process.env.DATABASE_URL) {
+    console.error('Refusing to listen on ' + HOST + ' without DATABASE_URL: a hosted server must store drawings in Postgres.');
     process.exit(1);
   }
   server.listen(PORT, HOST, () => console.log(`Looseleaf on http://${HOST}:${PORT} (${process.env.DATABASE_URL ? 'Postgres' : 'SQLite'}${PASSWORD ? ', sign-in on' : ''})`));
