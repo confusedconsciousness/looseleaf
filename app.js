@@ -1,5 +1,5 @@
 // Looseleaf client: a sessions sidebar around the Excalidraw editor, synced through the server.
-// Organised top to bottom: state → server calls → sync (flush / pull) → sessions → sidebar → events.
+// Organised top to bottom: state → server calls → sync (outbox / flush / pull / check) → sessions → sidebar → events.
 import { createElement as h } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Excalidraw, MainMenu, reconcileElements, CaptureUpdateAction } from '@excalidraw/excalidraw';
@@ -20,18 +20,23 @@ let pendingLib = '';  // a library URL waiting for the editor to mount
 
 // Looseleaf is local-first: the editor never waits for the network. Each session opened on this
 // device is kept in `docs` with, per element, the version the server has confirmed (`acked`).
-// An element whose version differs from that is unsent work, and its session sits in `dirty`.
-// ponytail: unsent work lives in memory, so it survives a dropped connection but not a closed
-// tab (the browser warns first). Keep `docs` in IndexedDB to also work fully offline.
-const docs = new Map();  // id -> { elements, files, acked: Map<elementId, version>, sentFiles: Set }
-const dirty = new Set(); // ids of sessions with unsent work
+// An element whose version differs from that is unsent work. What is unsent is never tracked by
+// a flag that could go stale: it is recomputed from the editor and `acked` every time.
+const docs = new Map();  // id -> { elements, files, acked: Map<elementId, version>, sentFiles: Set, updated }
 let seen = 0;            // scene version at the last onChange, to notice an edit cheaply
 let nfiles = 0;          // image count at the last onChange
 let timer = 0;           // the next check for a pause in drawing
 let edited = 0;          // when the scene last changed
 let due = 0;             // while drawing without a pause, send by this time anyway
-let sending = false;
+let sending = false;     // a flush is running
+let again = false;       // another flush was asked for while one was running
+let failing = false;     // the last flush could not reach the server
+let ready = false;       // the open editor has loaded its scene (before that it reports an empty one)
+let pullWhenReady = false;
 let fit = false;         // the open session still needs its first zoom-to-fit
+let unsyncedSince = 0;   // when the oldest work still unsent was first noticed (0: all on the server)
+let unstored = false;    // unsent work could not be written to this device's storage either
+let leaving = false;     // the tab is closing
 
 // Per-device memory, in localStorage: where you were looking in each session, and tool settings.
 const PREFS = /^currentItem|^(objectsSnapModeEnabled|gridModeEnabled|gridSize|gridStep|bindingPreference|isMidpointSnappingEnabled|preferredSelectionTool|boxSelectionMode|minimapEnabled|penMode)$/;
@@ -79,14 +84,29 @@ function status(s) {
   $('status').dataset.s = s;
   $('status').textContent = STATUS[s];
 }
+// The footer says where saving stands; if work stays unsent for more than a few seconds, a banner
+// over the canvas says so too, because a small footer is easy to miss for hours.
+function show() {
+  const left = pending();
+  unsyncedSince = left ? unsyncedSince || Date.now() : 0;
+  status(!left ? 'synced' : failing ? 'offline' : 'saving');
+  const mins = Math.floor((Date.now() - unsyncedSince) / 60000);
+  $('alarm').hidden = !left || Date.now() - unsyncedSince < 15000;
+  $('alarm').textContent = (mins ? `Not synced for ${mins} min. ` : 'Not synced yet. ') + (unstored
+    ? 'These changes exist only in this tab: keep it open until this message goes away.'
+    : 'Your changes are stored on this device and will sync when the server is reachable. They are not on your other devices yet.');
+}
 
+// Every request has a deadline. Without one, a request stranded by a sleeping laptop or a dropped
+// connection never finishes, and everything queued behind it waits forever.
 async function call(method, url, body) {
   const json = body && JSON.stringify({ ...body, client });
   const res = await fetch(url, {
     method,
     headers: body && { 'content-type': 'application/json' },
     body: json,
-    keepalive: !!json && json.length < 60000, // lets a small save finish even if the tab closes
+    signal: AbortSignal.timeout(45000),
+    keepalive: !!json && json.length < 60000 && (leaving || document.hidden), // lets a last small save outlive the tab
   });
   if (res.status === 401 && !$('login').open) $('login').showModal(); // not signed in on this device
   if (!res.ok) throw Object.assign(new Error((await res.json().catch(() => ({}))).error || res.statusText), { status: res.status });
@@ -105,16 +125,20 @@ function load(id) {
 
 // Takes a scene from the server as this device's copy: everything in it is confirmed.
 function adopt(id, s) {
-  const d = { elements: s.elements, files: s.files, acked: new Map(s.elements.map((e) => [e.id, e.version])), sentFiles: new Set(Object.keys(s.files)) };
+  const d = { elements: s.elements, files: s.files, acked: new Map(s.elements.map((e) => [e.id, e.version])), sentFiles: new Set(Object.keys(s.files)), updated: s.updated };
   docs.set(id, d);
   return d;
 }
 const unsent = (d) => d.elements.filter((e) => d.acked.get(e.id) !== e.version);
 const newFiles = (d) => Object.fromEntries(Object.entries(d.files).filter(([k]) => !d.sentFiles.has(k)));
+const owes = (d) => unsent(d).length > 0 || Object.keys(newFiles(d)).length > 0;
+const pending = () => [...docs.values()].some(owes);
 
-// Copies the editor's scene, view and settings into this device's memory.
+// Copies the editor's scene, view and settings into this device's memory. Only from an editor
+// that has finished loading: while it loads, its scene is empty, and copying that would make
+// unsent work look as if it had never been drawn.
 function snapshot() {
-  const d = api && docs.get(cur);
+  const d = ready && api && docs.get(cur);
   if (!d) return;
   d.elements = api.getSceneElementsIncludingDeleted();
   d.files = api.getFiles();
@@ -124,46 +148,102 @@ function snapshot() {
   keep('views', Object.fromEntries(sessions.filter((s) => views[s.id]).map((s) => [s.id, views[s.id]])));
   keep('prefs', prefs);
 }
-// Writes to localStorage only when the value changed, since this runs every time drawing pauses.
+// Writes to localStorage only when the value changed (null removes it). False if it didn't fit.
 const kept = {};
 function keep(k, v) {
-  const json = JSON.stringify(v);
-  if (kept[k] !== json) store(k, (kept[k] = json));
+  const json = v == null ? null : JSON.stringify(v);
+  if ((kept[k] ?? null) === json) return true;
+  try {
+    if (json == null) localStorage.removeItem(k);
+    else localStorage.setItem(k, json);
+    kept[k] = json;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// The outbox. Unsent work is also written to this device's storage, so it survives a reload, a
+// crash, a discarded tab or a closed laptop, and is sent the next time Looseleaf opens here.
+// ponytail: localStorage holds about 5 MB, so a large unsent image may not fit; then the banner
+// says the work exists only in this tab. Move the outbox to IndexedDB to lift that.
+const boxKey = (id) => `unsent:${id}:${client}`;
+function stash() {
+  unstored = false;
+  for (const [id, d] of docs) {
+    const box = owes(d) ? { name: sessions.find((s) => s.id === id)?.name, elements: unsent(d), files: newFiles(d) } : null;
+    if (!keep(boxKey(id), box)) unstored = true;
+  }
+}
+// Sends what earlier tabs on this device left in the outbox. Returns the ids it delivered to.
+async function recover() {
+  let keys = [];
+  try { keys = Object.keys(localStorage).filter((k) => k.startsWith('unsent:') && !k.endsWith(':' + client)); } catch {}
+  const done = [];
+  for (const k of keys) {
+    try {
+      const box = JSON.parse(localStorage.getItem(k));
+      let id = k.split(':')[1];
+      try {
+        await call('PUT', '/api/sessions/' + id, { elements: box.elements, files: box.files });
+      } catch (e) {
+        if (e.status !== 404) throw e;
+        // The session was deleted meanwhile. The work is still worth more than the tidiness.
+        id = (await call('POST', '/api/sessions', { name: ('Recovered ' + (box.name || 'session')).slice(0, 80) })).id;
+        await call('PUT', '/api/sessions/' + id, { elements: box.elements, files: box.files });
+      }
+      localStorage.removeItem(k);
+      done.push(id);
+    } catch {} // still in the outbox for the next attempt
+  }
+  return done;
 }
 
 // Sends each session's unsent elements. Only what changed goes up, and the server merges it into
-// the stored scene, so this stays small however big the drawing gets. Returns false on failure.
+// the stored scene, so this stays small however big the drawing gets. True once all is sent.
 async function flush() {
   clearTimeout(timer);
   timer = due = 0;
-  if (sending) return void arm(300);
-  snapshot(); // also how a pan or zoom with no edit gets remembered
-  if (!dirty.size) return true;
+  if (sending) return !(again = true);
   sending = true;
-  let failed = false;
-  for (const id of [...dirty]) {
-    const d = docs.get(id);
-    if (!d) { dirty.delete(id); continue; }
-    const elements = unsent(d);
-    const files = newFiles(d);
-    if (elements.length || Object.keys(files).length) {
+  failing = false;
+  try {
+    snapshot(); // also how a pan or zoom with no edit gets remembered
+    stash();
+    for (const [id, d] of [...docs]) {
+      const elements = unsent(d);
+      const files = newFiles(d);
+      if (!elements.length && !Object.keys(files).length) continue;
       try {
-        await call('PUT', '/api/sessions/' + id, { elements, files });
+        const res = await call('PUT', '/api/sessions/' + id, { elements, files });
         for (const e of elements) d.acked.set(e.id, e.version);
         for (const k in files) d.sentFiles.add(k);
+        d.updated = res.updated;
       } catch (e) {
-        if (e.status === 404) docs.delete(id), dirty.delete(id); // deleted on another device
-        else failed = true;
-        continue;
+        // 404: the session was deleted on another device while this one still had work for it.
+        if (e.status === 404) await rehome(id, d).catch(() => (failing = true));
+        else failing = true;
       }
-      if (id === cur) snapshot(); // anything drawn while that was in flight is still unsent
     }
-    if (!unsent(d).length && !Object.keys(newFiles(d)).length) dirty.delete(id);
+    snapshot(); // anything drawn while those were in flight is still unsent
+    stash();
+  } finally {
+    sending = false; // whatever happened above, the next flush must be able to run
   }
-  sending = false;
-  status(failed ? 'offline' : dirty.size ? 'saving' : 'synced');
-  if (dirty.size) arm(failed ? 3000 : 300);
-  return !failed;
+  show();
+  if (again || pending()) arm(failing ? 3000 : 300);
+  again = false;
+  return !failing && !pending();
+}
+// Unsent work for a session that no longer exists goes into a new one instead of being dropped.
+async function rehome(id, d) {
+  const name = ('Recovered ' + (sessions.find((s) => s.id === id)?.name || 'session')).slice(0, 80);
+  const s = await call('POST', '/api/sessions', { name });
+  await call('PUT', '/api/sessions/' + s.id, { elements: d.elements, files: d.files });
+  docs.delete(id);
+  keep(boxKey(id), null);
+  if (id === cur) history.replaceState(null, '', '#' + s.id);
+  safe(refresh)();
 }
 // Saving waits for a pause: while edits are still arriving it checks again shortly, up to `due`.
 function arm(ms) {
@@ -171,7 +251,7 @@ function arm(ms) {
   timer = setTimeout(() => {
     timer = 0;
     const now = Date.now();
-    if (dirty.size && now - edited < 600 && now < due) arm(300);
+    if (now - edited < 600 && now < due) arm(300);
     else flush();
   }, ms);
 }
@@ -181,23 +261,25 @@ function arm(ms) {
 async function pull() {
   const id = cur;
   if (!id) return;
+  if (!ready) return void (pullWhenReady = true);
   const remote = await load(id);
   const d = docs.get(id);
   if (!d) return;
-  if (id !== cur || !api) return void (unsent(d).length || adopt(id, remote));
+  if (id !== cur || !ready || !api) return void (owes(d) || adopt(id, remote));
   const merged = reconcileElements(api.getSceneElementsIncludingDeleted(), remote.elements, api.getAppState());
   api.addFiles(Object.values(remote.files));
   api.updateScene({ elements: merged, captureUpdate: CaptureUpdateAction.NEVER }); // stays out of undo
   for (const e of remote.elements) d.acked.set(e.id, e.version);
   for (const k in remote.files) d.sentFiles.add(k);
+  d.updated = remote.updated;
   d.elements = merged;
   seen = version(merged);
   nfiles = Object.keys(api.getFiles()).length;
-  if (unsent(d).length) dirty.add(id), arm(300); // our own edits the server hasn't got yet
+  if (owes(d)) arm(300); // our own edits the server hasn't got yet
 }
 
-// Runs on every editor update, including pointer moves, so it only compares two numbers. The
-// save waits for a pause in drawing (or 8 seconds of drawing without one).
+// Runs on every editor update, including pointer moves, so it only compares two numbers and makes
+// sure a check is scheduled. The check itself works out what is unsent from scratch.
 function onChange(elements, appState, files) {
   if (appState.theme !== theme) setTheme(appState.theme);
   const v = version(elements);
@@ -207,11 +289,26 @@ function onChange(elements, appState, files) {
     nfiles = n;
     edited = Date.now();
     due ||= edited + 8000;
-    dirty.add(cur);
-    status('saving');
+    unsyncedSince ||= edited;
+    if (ready) status('saving');
   }
   if (!timer) arm(700);
 }
+
+// The event stream can die without a sound (a laptop waking, a proxy that buffers it), and a tab
+// can sit open for days. So besides the stream: whenever the tab comes to the front, the network
+// returns, and once a minute, send anything unsent, deliver old outboxes, reload the list, and
+// fetch the open session if the server's copy has moved on.
+let checked = 0;
+const check = safe(async () => {
+  if (document.hidden || $('login').open || Date.now() - checked < 5000) return;
+  checked = Date.now();
+  flush();
+  const recovered = await recover();
+  await refresh();
+  const s = sessions.find((x) => x.id === cur);
+  if (recovered.includes(cur) || (s && docs.get(cur) && s.updated !== docs.get(cur).updated)) await pull();
+});
 
 /* ---------- sessions ---------- */
 
@@ -227,14 +324,19 @@ const MENU = h(MainMenu, null,
 // goes up in the background. A session seen before shows at once from memory, then catches up.
 let opening = 0;
 async function open(id) {
+  const turn = ++opening; // also cancels a session still loading when you click back to this one
   if (id === cur) return;
-  const turn = ++opening;
-  if (api) snapshot(), flush();
-  const cached = docs.get(id);
-  const d = cached || adopt(id, await load(id));
+  flush();
+  const cached = docs.has(id);
+  const s = cached || (await load(id));
   if (turn !== opening) return; // another session was clicked while this one loaded
+  snapshot(); // the old editor stayed usable while the new session loaded: keep what was drawn then
+  stash();
+  const d = docs.get(id) || adopt(id, s);
   cur = id;
   api = null;
+  ready = false;
+  pullWhenReady = cached;
   // Deleted elements stay in `acked` so the server's copy of them isn't resent, but the editor
   // only gets what's visible.
   const elements = d.elements.filter((e) => !e.isDeleted);
@@ -256,6 +358,9 @@ async function open(id) {
       const all = a.getSceneElements();
       if (fit && all.length) a.setViewport({ target: all, fit: 'scale-down', animation: false, offsets: { ui: true } });
       fit = false;
+      ready = true;
+      if (pullWhenReady) safe(pull)();
+      pullWhenReady = false;
     },
     onChange,
     onLibraryChange: (items) => {
@@ -266,20 +371,24 @@ async function open(id) {
   }, MENU));
   if (narrow()) document.body.classList.add('shut');
   draw();
-  if (cached) safe(pull)();
 }
 
 // Reloads the list; also recovers when the open session was deleted on another device.
-let firstList = call('GET', '/api/sessions'); // started at once, not after the event stream connects
+const recovered = recover(); // outboxes from earlier tabs go up before anything is read back
+let firstList = recovered.then(() => call('GET', '/api/sessions')); // started at once, not after the event stream connects
 firstList.catch(() => {});
 async function refresh() {
   const first = firstList;
   firstList = null;
   sessions = await (first ? first.catch(() => call('GET', '/api/sessions')) : call('GET', '/api/sessions'));
   if (!sessions.length) sessions = [await call('POST', '/api/sessions', { name: 'My first session' })];
-  for (const id of docs.keys()) if (!sessions.some((s) => s.id === id)) docs.delete(id), dirty.delete(id);
+  // A session deleted elsewhere is forgotten here too, unless this device still has unsent work
+  // for it: flush() then moves that work to a new session.
+  snapshot();
+  for (const [id, d] of docs) if (!sessions.some((s) => s.id === id) && !owes(d)) docs.delete(id);
   if (!sessions.some((s) => s.id === cur)) {
     cur = api = null;
+    ready = false;
     const wanted = [location.hash.slice(1), store('last')];
     await open((wanted.map((w) => sessions.find((s) => s.id === w)).find(Boolean) || sessions[0]).id);
   }
@@ -289,7 +398,7 @@ async function refresh() {
 async function create() {
   const s = await call('POST', '/api/sessions', { name: 'Untitled' });
   sessions.unshift(s);
-  adopt(s.id, { elements: [], files: {} });
+  adopt(s.id, { elements: [], files: {}, updated: s.updated });
   await open(s.id);
   document.body.classList.remove('shut');
   rename(s);
@@ -298,6 +407,9 @@ async function create() {
 async function remove(s) {
   if (!confirm(`Delete “${s.name}”? This can't be undone.`)) return;
   await call('DELETE', `/api/sessions/${s.id}?client=${client}`);
+  if (s.id === cur) ready = false; // deleted on purpose here: nothing of it is unsent work to keep
+  docs.delete(s.id);
+  keep(boxKey(s.id), null);
   await refresh();
 }
 
@@ -409,12 +521,27 @@ addEventListener('hashchange', safe(() => {
   const id = location.hash.slice(1);
   if (sessions.some((s) => s.id === id)) return open(id);
 }));
-// Phones freeze background tabs without warning, so save the moment the page is hidden.
-document.addEventListener('visibilitychange', () => { if (document.hidden) snapshot(), flush(); });
-// Closing the tab: send what's left, and have the browser ask first if some of it may not make it.
-addEventListener('beforeunload', (e) => {
+// Browsers freeze, discard and close background tabs without warning. So the moment the page is
+// hidden, write unsent work to this device's storage (that part is synchronous, so it always
+// completes) and try to send it. Coming back to the front runs the full check.
+function park() {
   snapshot();
-  if (dirty.size) flush(), e.preventDefault();
+  stash();
+  flush();
+}
+document.addEventListener('visibilitychange', () => (document.hidden ? park() : check()));
+addEventListener('pagehide', () => { leaving = true; park(); });
+addEventListener('focus', check);
+addEventListener('online', check);
+setInterval(check, 60000);
+setInterval(show, 5000); // keeps the banner's minutes current
+// Closing the tab with work still unsent: the browser asks first. The work is in the outbox
+// either way, but it would not reach your other devices until this one opens Looseleaf again.
+addEventListener('beforeunload', (e) => {
+  leaving = true;
+  park();
+  if (pending()) e.preventDefault();
+  else leaving = false;
 });
 
 const saved = (k) => { try { return JSON.parse(store(k)) || {}; } catch { return {}; } };
@@ -422,7 +549,7 @@ views = saved('views');
 prefs = saved('prefs');
 // Start downloading the session you'll land on now, alongside the list, instead of after it.
 const land = location.hash.slice(1) || store('last');
-if (/^[\w-]+$/.test(land || '')) load(land).catch(() => {});
+if (/^[\w-]+$/.test(land || '')) recovered.then(() => load(land)).catch(() => {});
 try { library = JSON.parse(store('library')) || []; } catch {}
 takeLibrary();
 setTheme(store('theme') || 'dark'); // ink is the house look; the editor's menu switches to paper
@@ -447,11 +574,12 @@ $('login').onsubmit = async (e) => {
   store('signedIn', '1');
   $('out').hidden = false;
   $('login').close();
-  connect(); // loads the list and catches up; a save that was waiting retries by itself
+  connect();
+  checked = 0;
+  check(); // loads the list, delivers anything unsent and catches up
 };
 $('out').onclick = safe(async () => {
-  snapshot();
-  if (!(await flush()) || dirty.size) return; // don't sign out over unsaved work
+  if (!(await flush())) return; // don't sign out over unsaved work
   await fetch('/api/login', { method: 'DELETE' });
   store('signedIn', '');
   location.reload();
@@ -459,19 +587,18 @@ $('out').onclick = safe(async () => {
 
 /* ---------- live connection ---------- */
 
-// The event stream drives everything: its first `open` loads the app, and every reconnect
-// catches up on whatever changed while this device was offline.
+// The event stream brings other devices' changes in live. Loading the app does not wait for it,
+// and check() above covers for it when it is down, so a blocked stream costs only liveness.
 let events = null;
 let live = false; // true once the stream has connected
 function connect() {
   events?.close();
   const es = (events = new EventSource('/api/events'));
   es.onopen = safe(async () => {
-    if (!dirty.size) status('synced');
+    show();
     const reconnected = live;
     live = true;
-    await refresh();
-    if (reconnected) await pull(); // the first connect has only just loaded the session
+    if (reconnected) checked = 0, await check(); // catch up on what changed while it was down
   });
   es.onmessage = safe((e) => {
     const m = JSON.parse(e.data);
@@ -489,4 +616,5 @@ function connect() {
     });
   };
 }
+safe(refresh)(); // the list and the landing session, without waiting for the stream
 connect();

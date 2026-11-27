@@ -46,11 +46,14 @@ test('sign-in guards the API, and two devices saving the same session both keep 
     assert.equal(typeof s.updated, 'number');
     // Sent at the same moment: device B never saw 'a', yet neither save may clobber the other.
     await Promise.all([json('PUT', base + '/' + s.id, { elements: [el('a', 1)] }), json('PUT', base + '/' + s.id, { elements: [el('b', 1)] })]);
-    await json('PUT', base + '/' + s.id, { name: 'Design v2', files: { f1: { id: 'f1' } } });
+    const put = await json('PUT', base + '/' + s.id, { name: 'Design v2', files: { f1: { id: 'f1' } } });
+    // A save that changes nothing must not move `updated`, or every device would refetch for nothing.
+    assert.deepEqual(await json('PUT', base + '/' + s.id, { elements: [el('a', 1)] }), { ok: true, updated: put.updated });
     const got = await json('GET', base + '/' + s.id);
     assert.deepEqual(got.elements.map((e) => e.id), ['a', 'b']);
     assert.deepEqual([got.name, Object.keys(got.files)], ['Design v2', ['f1']]);
-    assert.equal(typeof (await json('GET', base)).find((x) => x.id === s.id).updated, 'number');
+    assert.equal((await json('GET', base)).find((x) => x.id === s.id).updated, put.updated); // list, scene and save agree
+    assert.equal(got.updated, put.updated);
     assert.equal((await req('POST', base, {}, {})).status, 400); // no JSON content-type
     assert.equal((await req('DELETE', base + '/' + s.id)).status, 200);
     assert.equal((await req('GET', base + '/' + s.id)).status, 404);

@@ -30,7 +30,7 @@ any device.
 
 | Setting | What it does |
 |---|---|
-| `DATABASE_URL` | A Postgres connection string. When set, drawings are stored there instead of SQLite. The table is created on first start. |
+| `DATABASE_URL` | A Postgres connection string. When set, drawings are stored there instead of SQLite. The table is created on first start. Required when `HOST` is not local: a host's disk is wiped on restart, so the server refuses to start there without it. |
 | `PASSWORD` | Turns sign-in on. Must be at least 12 characters when the server is reachable from other machines. |
 | `HOST` | `0.0.0.0` to accept connections from other machines (default `127.0.0.1`). |
 | `PORT` | Default 4322. Most hosts set this for you. |
@@ -57,17 +57,29 @@ Changing `PASSWORD` signs every device out. Ten wrong passwords lock sign-in for
 
 ## How sync works
 
-Looseleaf is local-first: drawing and switching sessions never wait for the network.
+Looseleaf is local-first: drawing and switching sessions never wait for the network, and work
+that has not reached the server yet is never held in memory alone.
 
 - Each session is one database row holding its Excalidraw elements and images.
 - A device keeps every session it has opened in memory, and remembers which version of each
-  element the server has confirmed. When you pause drawing, it sends only the elements that
-  changed. Switching sessions sends what's left in the background.
+  element the server has confirmed. Anything else is unsent work; that is recomputed from the
+  editor every time, never tracked by a flag.
+- **The outbox.** Unsent work is written to the device's own storage whenever drawing pauses and
+  the moment the tab is hidden or closed. If the tab is reloaded, discarded or crashes, the next
+  start on that device sends it before loading anything.
+- When you pause drawing, the device sends only the elements that changed. Every request has a
+  45-second deadline, so one stranded request cannot hold up the saves behind it; failures retry
+  every few seconds.
 - The server merges what arrives element by element: the higher `version` of each element wins,
   the rule Excalidraw's own collaboration uses. Two devices drawing in the same session both
   keep their work.
-- The server then tells every other open device over a server-sent event stream, and they fetch
-  and fold in the change. A device that was offline catches up when the stream reconnects.
+- Other devices hear about a change over a server-sent event stream. Because that stream can die
+  silently, each device also checks on its own: when the tab comes to the front, when the network
+  returns, and once a minute, it retries unsent work, reloads the list, and fetches the open
+  session if the server's copy has moved on.
+- If work stays unsent for more than about 15 seconds, a banner over the canvas says so.
+- Unsent work for a session that was deleted on another device goes into a new session named
+  "Recovered …" instead of being dropped.
 - Each device remembers, per session, where you were looking and your tool settings (in
   localStorage). The first time a device opens a session it zooms out to fit the whole drawing.
 
@@ -79,6 +91,8 @@ Search the code for `ponytail:` to find each one and its upgrade path.
 - One password and one owner: no user accounts, no sharing, no live cursors.
 - Excalidraw's shape library, the view (zoom, scroll position) and tool settings are kept per
   device, not synced.
-- Unsent edits are held in memory: they survive a dropped connection, but not closing the tab
-  while offline (the browser warns first).
+- The outbox lives in localStorage (about 5 MB). A large image that has not synced yet may not
+  fit; the banner then says the work exists only in that tab.
+- Unsent work reaches other devices only once the device that made it is online with Looseleaf
+  open.
 - The editor is a pinned canary build of Excalidraw, not a stable release.

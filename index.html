@@ -123,6 +123,13 @@
   #out:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
   #canvas { flex: 1; min-width: 0; height: 100%; }
+  /* Shown over the canvas when work has stayed unsent: too important for the footer alone. */
+  #alarm {
+    position: fixed; z-index: 20; top: 64px; left: 50%; transform: translateX(-50%);
+    max-width: min(560px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 6px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 600; line-height: 1.35;
+    box-shadow: 0 6px 24px #0006;
+  }
 
   #login {
     width: min(340px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: 6px;
@@ -193,6 +200,7 @@
     </footer>
   </aside>
   <main id="canvas"></main>
+  <div id="alarm" role="alert" hidden></div>
   <dialog id="login" aria-labelledby="login-title">
     <form>
       <h1 id="login-title"><span class="mark"></span>looseleaf</h1>
